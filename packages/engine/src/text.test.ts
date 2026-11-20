@@ -162,3 +162,14 @@ describe('diagram as code: errors on their line, with a fix when there is one', 
     expect(errs('a: vm\na % b')[0]?.message).toContain('cannot be used here');
   });
 });
+
+describe('the diagram notes survive the text (decision 27)', () => {
+  it('applying the printed text, and the text with a new block, keeps the notes', () => {
+    const d: Diagram = { ...fromTemplate('three-tier'), notes: '# Why\nTwo app servers.' };
+    const same = applyText(d, printText(d));
+    expect(same.ok && same.diagram.notes).toBe(d.notes);
+    const more = applyText(d, printText(d) + '\nextra-cache: cache\n');
+    expect(more.ok && more.diagram.notes).toBe(d.notes);
+    expect(more.ok && more.diagram.nodes.some((n) => n.label === 'extra-cache')).toBe(true);
+  });
+});

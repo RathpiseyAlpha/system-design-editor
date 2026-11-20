@@ -220,7 +220,8 @@ They meet through two small, versioned APIs; neither imports the other's code.
 ```
 
 ### 8.1 Embed API
-- `https://<editor>/embed?mode=edit|view|learn&origin=<host origin>`. Messages are JSON `{type, v: 1, ...}`, sent only to the
+- `https://<editor>/embed/?mode=edit|view|learn&origin=<host origin>` (with the slash: the page loads `../assets/`, so `/embed`
+  works only where the server redirects it). Messages are JSON `{type, v: 1, ...}`, sent only to the
   declared host origin and accepted only from it.
   - host → editor: `load {diagram, readOnly, show?, packs?, brief?, rules?}`, `setTheme`, `requestSave`.
   - editor → host: `ready`, `change {diagram, dirty}` (debounced), `save {diagram}`, `submit {diagram}`, `hints {results}`.
