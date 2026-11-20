@@ -1,10 +1,13 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useEditor } from './state/store.ts';
 import { Canvas } from './canvas/Canvas.tsx';
 import { Icon, Sprite } from './ui/Icon.tsx';
 import { TopBar } from './ui/TopBar.tsx';
 import { Palette, findService } from './ui/Palette.tsx';
 import { Inspector } from './ui/Inspector.tsx';
+
+// The text view loads only when it is opened, so the editor starts without CodeMirror.
+const CodePanel = lazy(() => import('./code/CodePanel.tsx'));
 
 function StatusBar() {
   const n = useEditor((s) => s.diagram.nodes.length);
@@ -67,18 +70,31 @@ function useShortcuts() {
 
 export function App() {
   useShortcuts();
+  const layout = useEditor((s) => s.layout);
+  const canvas = (
+    <div className="canvas-wrap">
+      <NoticeBar />
+      <Canvas />
+    </div>
+  );
+  const code = (
+    <Suspense fallback={<div className="code-panel code-loading">Opening the text view…</div>}>
+      <CodePanel />
+    </Suspense>
+  );
   return (
     <div className="app">
       <Sprite />
       <TopBar />
-      <div className="body3">
-        <Palette />
-        <div className="canvas-wrap">
-          <NoticeBar />
-          <Canvas />
+      {layout === 'canvas' && (
+        <div className="body3">
+          <Palette />
+          {canvas}
+          <Inspector />
         </div>
-        <Inspector />
-      </div>
+      )}
+      {layout === 'split' && <div className="body-split">{code}{canvas}</div>}
+      {layout === 'code' && <div className="body-code">{code}</div>}
       <StatusBar />
     </div>
   );

@@ -19,6 +19,12 @@ function Mark() {
   );
 }
 
+const VIEWS: { id: 'canvas' | 'split' | 'code'; name: string; title: string; icon: 'cube' | 'split' | 'code' }[] = [
+  { id: 'canvas', name: '3D', title: 'The 3D canvas', icon: 'cube' },
+  { id: 'split', name: 'Split', title: 'Text and canvas side by side', icon: 'split' },
+  { id: 'code', name: 'Code', title: 'The diagram as text', icon: 'code' },
+];
+
 const fileName = (title: string) => `${title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'diagram'}.archboard.json`;
 
 export function TopBar() {
@@ -28,6 +34,7 @@ export function TopBar() {
   const canRedo = useEditor((s) => s.future.length > 0);
   const pack = useEditor((s) => s.pack);
   const theme = useEditor((s) => s.theme);
+  const layout = useEditor((s) => s.layout);
   const { setPack, setTheme, setTitle, undo, redo, newFromTemplate, openText } = useEditor.getState();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -92,6 +99,13 @@ export function TopBar() {
         <option value="svg">Export SVG picture</option>
       </select>
       <span className="vsep" />
+      <div className="seg view-seg" role="group" aria-label="View">
+        {VIEWS.map((v) => (
+          <button key={v.id} type="button" aria-pressed={layout === v.id} aria-label={v.name} title={v.title} onClick={() => useEditor.getState().setLayout(v.id)}>
+            <Icon name={v.icon} /><span className="lbl">{v.name}</span>
+          </button>
+        ))}
+      </div>
       <div className="seg pack-seg" role="group" aria-label="Show as">
         {PACKS.map((p) => (
           <button key={p.id} type="button" aria-pressed={pack === p.id} onClick={() => setPack(p.id)}>{p.name}</button>
@@ -105,6 +119,15 @@ export function TopBar() {
         <option value="light">Theme: Light</option>
         <option value="dark">Theme: Dark</option>
       </select>
+      <button
+        className="btn btn--icon btn--ghost theme-btn"
+        type="button"
+        aria-label={`Theme: ${theme}. Change theme`}
+        title={`Theme: ${theme} (click to change)`}
+        onClick={() => setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system')}
+      >
+        <Icon name={theme === 'dark' ? 'moon' : theme === 'light' ? 'sun' : 'contrast'} />
+      </button>
     </header>
   );
 }

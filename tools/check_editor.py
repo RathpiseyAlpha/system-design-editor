@@ -43,7 +43,7 @@ def center(p, sel):
 
 
 def key(p, k, code=None, mods=0, text=None):
-    params = dict(key=k, code=code or k, modifiers=mods, windowsVirtualKeyCode={"ArrowRight": 39, "ArrowLeft": 37, "ArrowUp": 38, "ArrowDown": 40, "Delete": 46, "Enter": 13, "Escape": 27}.get(k, ord(k.upper()) if len(k) == 1 else 0))
+    params = dict(key=k, code=code or k, modifiers=mods, windowsVirtualKeyCode={"ArrowRight": 39, "ArrowLeft": 37, "ArrowUp": 38, "ArrowDown": 40, "Delete": 46, "Enter": 13, "Escape": 27, "End": 35, "Home": 36}.get(k, ord(k.upper()) if len(k) == 1 else 0))
     p.call("Input.dispatchKeyEvent", type="keyDown", **params, **({"text": text} if text else {}))
     p.call("Input.dispatchKeyEvent", type="keyUp", **params)
 
@@ -225,6 +225,52 @@ try:
     key(p, "z", "KeyZ", mods=2)
     d = saved(p)
     check("and Undo brings the previous diagram back", d["title"] == "Online shop")
+
+    # 15. Split view: the text of the diagram beside the canvas, synced both ways.
+    p.js("document.querySelector('button[aria-label=\"Split\"]').click();")
+    for _ in range(40):
+        time.sleep(0.25)
+        if p.js("return !!document.querySelector('.cm-content');"):
+            break
+    code = lambda: p.js("return document.querySelector('.cm-content').innerText;") or ""
+    check("Split view shows the diagram as text", "orders-db: relational-db" in code())
+
+    def type_at_end(text):
+        p.js("document.querySelector('.cm-content').focus();")
+        key(p, "End", "End", mods=2)  # Ctrl+End: the end of the text
+        p.call("Input.insertText", text=text)
+        time.sleep(0.6)  # text applies 0.4 s after the last key; autosave follows 0.5 s later (saved() waits for that)
+
+    n_before = len(saved(p)["nodes"])
+    type_at_end("\nworker: function\n")
+    d = saved(p)
+    check("typing a new block in the text adds it to the canvas", any(n["label"] == "worker" for n in d["nodes"]) and p.js("return [...document.querySelectorAll('[data-block]')].length;") == n_before + 1)
+
+    type_at_end("bad: relational-bd\n")
+    time.sleep(0.6)
+    d = saved(p)
+    msg = p.js("return document.querySelector('.code-msg')?.innerText || '';") or ""
+    check("a typo shows its error, and the canvas keeps the last good diagram", "relational-db" in msg and not any(n["label"] == "bad" for n in d["nodes"]), msg[:80])
+    p.js("[...document.querySelectorAll('.code-msg button')].find(b => b.textContent.startsWith('Use')).click();")
+    time.sleep(0.6)
+    d = saved(p)
+    bad = next((n for n in d["nodes"] if n["label"] == "bad"), None)
+    check("the fix button corrects the text and the block appears", bad is not None and bad["role"] == "relational-db")
+
+    p.js("document.querySelector('[data-block=\"n6\"]').focus();")
+    key(p, "Delete")
+    time.sleep(0.8)
+    check("deleting a block on the canvas rewrites the text", "sessions:" not in code())
+    p.js("document.querySelector('svg.iso').focus();")
+    key(p, "z", "KeyZ", mods=2)
+    time.sleep(0.8)
+    check("undo on the canvas brings it back into the text", "sessions:" in code())
+
+    p.js("document.querySelector('button[aria-label=\"Code\"]').click();")
+    time.sleep(0.4)
+    check("Code view shows the text alone", p.js("return !!document.querySelector('.cm-content') && !document.querySelector('svg.iso');"))
+    p.js("document.querySelector('button[aria-label=\"3D\"]').click();")
+    time.sleep(0.6)
 
     # Leave a block selected for the screenshot.
     x, y = center(p, '[data-block="n5"] .top')

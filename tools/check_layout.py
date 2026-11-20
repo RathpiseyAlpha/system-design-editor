@@ -50,6 +50,22 @@ for w, h in SIZES:
             check(f"{tag}: no text under 12 px", not m["small"], ", ".join(m["small"][:4]))
             data = p.call("Page.captureScreenshot", format="png")["data"]
             shots.append((tag, base64.b64decode(data)))
+            # The same in Split view: text beside the canvas.
+            p.js("document.querySelector('button[aria-label=Split]').click();")
+            for _ in range(40):
+                time.sleep(0.25)
+                if p.js("return !!document.querySelector('.cm-content');"):
+                    break
+            s = p.js("""
+              const de=document.documentElement, top=document.querySelector('.topbar'), code=document.querySelector('.code-panel'), canvas=document.querySelector('.canvas');
+              return {sideways: de.scrollWidth>de.clientWidth, topFits: top.scrollWidth<=top.clientWidth+1,
+                      both: !!code && code.getBoundingClientRect().width>250 && !!canvas && canvas.getBoundingClientRect().width>400};
+            """)
+            check(f"{tag} split: no sideways scroll", not s["sideways"])
+            check(f"{tag} split: the top bar fits", s["topFits"])
+            check(f"{tag} split: text and canvas both have room", s["both"])
+            data = p.call("Page.captureScreenshot", format="png")["data"]
+            shots.append((tag + " split", base64.b64decode(data)))
         finally:
             p.close()
             time.sleep(0.3)
