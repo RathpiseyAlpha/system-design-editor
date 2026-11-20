@@ -7,10 +7,10 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M0, design phase (2026-11-20).** No application code yet. What exists:
+**M0 done and approved (2026-11-20); M1 is next.** No application code yet. What exists:
 
 - `SPEC.md`: the product spec (users, scope by version, catalog and packs, file format, rule engine, embed and checker APIs,
-  screen sizes, stack, milestones, open decisions). It is the scope: change it first when the scope changes.
+  screen sizes, stack, milestones, decisions). It is the scope: change it first when the scope changes.
 - `design/tokens.css`: the one source of colours, type, sizes, shadows and motion.
 - `design/design-system.html`: design system and key screens A to E (E is the simulator at 1280 × 720). Its script is a
   working prototype of the isometric renderer (rounded blocks, cylinders, plates, zone plates, stickers, grid-axis
@@ -19,7 +19,7 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 - `tools/fetch_icons.py`: fetches, cleans and catalogs the icons into `design/icons/` (`manifest.json`, `catalog.js`, `oss/`,
   `aws/`). `design/icons/SOURCES.md` records sources, pins and terms.
 
-Next is M1 (SPEC section 11), only after the instructor approves the design.
+Next is M1 (SPEC section 11): the repository layout and stack of SPEC section 10, then the editor core.
 
 ## Decided by the instructor (2026-11-20; do not reopen without them)
 
@@ -42,18 +42,28 @@ Next is M1 (SPEC section 11), only after the instructor approves the design.
 - **Labs** after the simulator (SPEC section 14), as a host add-on like learning mode: brief, starting diagram, scenarios,
   behaviour checks; the host re-runs the simulation on its server through the checker API to score.
 
-## Proposed in M0, waiting for approval
+## Decided on the instructor's behalf (2026-11-20; reasons in SPEC section 12, reversible)
 
-- Canvas as our own SVG scene (no Three.js, no React Flow; `d3-zoom` for pan and zoom). Trade-off: hit testing, drag with snap,
-  box select, connecting, routing and keyboard access are our code, the largest cost of M1.
-- The file stores ground grid cells and roles, never pixels, view state or a pack's product names.
-- Simulation engine: rate-based with a fixed 1 s step (not discrete-event), deterministic (id order, seeded random only,
-  no clock, rounded each tick, `engine` version on results). The routing rules, verdict and behaviour defaults are in SPEC 13.3–13.4.
-- **One TypeScript engine** (rules and simulation) runs in the browser's Web Worker and in a Node checker service, so the
-  browser and the judge never disagree. This replaces the earlier Python `archboard-check` package (SPEC open decision 9).
-- Labs lock per-instance capacity, latency and hit rate and give a budget (total instances), so checks cannot be passed by
-  typing big numbers.
-- The working name, the text syntax draft, JetBrains Mono + IBM Plex Sans, the green highlighter accent.
+- **Stack (SPEC section 10):** npm workspaces with `packages/engine` (plain TypeScript: format, rules, simulation; no DOM,
+  no framework), `apps/editor` (React 19, Vite static SPA, Tailwind 4 + tokens, shadcn/ui, Zustand, Comlink workers,
+  CodeMirror 6, elkjs), `apps/checker` (Hono on Node 22, Docker, stateless). No Next.js, Three.js, React Flow, Python
+  checker, NestJS or Express.
+- **Canvas: our own SVG scene**, pan and zoom with `d3-zoom`. Hit testing, drag with snap, box select, connecting, routing
+  and keyboard access are our code, the largest cost of M1. Fast paths stay out of React (drag moves the block directly,
+  dots are SVG animations, the worker posts at most 10 updates a second).
+- **The file stores ground grid cells and roles**, never pixels, view state or a pack's product names.
+- **One TypeScript engine** (rules and simulation) in the browser's Web Worker and in the Node checker, so the browser and
+  the judge never disagree. The Python `archboard-check` package is dropped; labsite calls the checker over HTTP.
+- **Simulation engine: rate-based, fixed 1 s step**, deterministic (id order, seeded random only, no clock, rounded each
+  tick, `engine` version on results). Routing, verdict and defaults: SPEC 13.3–13.4; defaults are tuned in M4.
+- **Hosting:** the editor on GitHub Pages; the checker in Docker next to labsite on the instructor's server, internal only.
+- **AWS icon files are fetched at build time, never committed.**
+- Labs lock per-instance capacity, latency and hit rate and give an instance budget, so checks cannot be passed by typing
+  big numbers.
+- Working name "Archboard", the draft text syntax, JetBrains Mono + IBM Plex Sans, the green highlighter accent; English only,
+  with interface strings in one file.
+
+**Still open for the instructor:** the repository's licence; a trademark check on the name before any public launch.
 
 ## Rules
 
@@ -64,8 +74,10 @@ Next is M1 (SPEC section 11), only after the instructor approves the design.
   1280 × 720, 1366 × 768, 1536 × 864 and 1920 × 1080 (the size switcher on Screen A of the design page does this).
 - **Icons:** only through `tools/fetch_icons.py` (pinned sources, allowlist cleaning, licence recorded). Show AWS icons and
   logos unmodified on the light sticker (`--sticker`): never redraw, recolour, crop or skew them. A product goes in the
-  Open source pack only if its licence is OSI-approved, read from its own repository. `design/icons/aws/` is git-ignored
-  until the instructor decides on redistribution (SPEC open decision 2).
+  Open source pack only if its licence is OSI-approved, read from its own repository. `design/icons/aws/` is git-ignored:
+  AWS icon files are fetched at build time and never committed (SPEC section 12, decision 6).
+- The checker service treats every request as untrusted: zod schema and size limits, rules and simulations in a
+  `worker_threads` worker with time and memory limits, an API key per host, a rate limit per key. It stores nothing.
 - Status is word + icon + colour. One primary (highlighter) button per view. Sentence case; buttons are verb + object.
 - No sideways page scroll at any width; the canvas pans inside itself. Touch targets 44 px on phones.
 - Accessibility: every canvas action has a keyboard path; the code view is the canvas's text alternative; respect `prefers-reduced-motion`.
@@ -86,4 +98,5 @@ Next is M1 (SPEC section 11), only after the instructor approves the design.
 - Look at the design page: open `design/design-system.html` in a browser (add `#light` or `#dark` to force a theme).
   Headless check: `chrome --headless=new --allow-file-access-from-files --window-size=1400,9200 --screenshot=out.png "file:///.../design/design-system.html#light"`.
 - When the app exists (Vite): the path contains `&`, so `npm run` fails on this machine; run tools directly, for example
-  `node node_modules/vite/bin/vite.js build`. On this machine `python` is 3.12.
+  `node node_modules/vite/bin/vite.js build` and `node node_modules/vitest/vitest.mjs run`. On this machine `node` is 22 and
+  `python` is 3.12.

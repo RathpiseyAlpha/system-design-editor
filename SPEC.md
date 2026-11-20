@@ -1,6 +1,6 @@
 # Archboard — product spec
 
-Status: **design phase** (2026-11-20). No application code yet. "Archboard" is a working name.
+Status: **M0 design approved** (2026-11-20, section 12); M1 is next. No application code yet. "Archboard" is a working name.
 
 ## 1. What it is
 
@@ -195,8 +195,8 @@ A challenge is a scenario plus rules over roles, zones and edges, never over pos
   "rule": { "noEdge": { "from": "client", "to": "relational-db" } } }
 ```
 
-Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. Proposed: one TypeScript implementation runs in the
-browser (live hints) and in the checker service (the judge), so the two can never disagree (section 12, open decision 9).
+Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. One TypeScript implementation runs in the browser (live hints)
+and in the checker service (the judge), so the two can never disagree (section 12, decision 9).
 Behaviour checks that need the simulator are part of labs (section 14).
 
 ## 8. Integration: embed API and checker API
@@ -228,9 +228,9 @@ They meet through two small, versioned APIs; neither imports the other's code.
 - `POST /v1/check` `{diagram, ruleset}` → `{valid, results: [{id, pass, points, message}], score, max}`; stateless.
 - `POST /v1/check` `{diagram, lab}` (labs, section 14) also validates the diagram against the lab's budget and locks and
   re-runs every lab scenario with the simulation engine and the lab's seeds; results carry the `engine` version.
-- Proposed: the checker service is a small Node service around the **same TypeScript packages** (rules and simulation) the
+- The checker service is a small Node service around the **same TypeScript packages** (rules and simulation) the
   browser uses; hosts in any language (labsite is Flask) call it over HTTP. This replaces the earlier idea of a Python
-  `archboard-check` package, because a port would drift from the browser and students would dispute marks (open decision 9).
+  `archboard-check` package, because a port would drift from the browser and students would dispute marks (decision 9).
 - **The host's server is the judge**; a score or a simulation result sent from a browser is never trusted.
 
 ### 8.3 First host: the course lab site (work done in labsite, not here)
@@ -256,21 +256,52 @@ embedded in a narrower host page.
 - No sideways page scroll at any width (the canvas pans inside itself).
 - Works offline once loaded; no third-party requests (fonts and icons bundled).
 
-## 10. Stack (planned)
+## 10. Stack (decided 2026-11-20)
 
-Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix) for panels and controls, zod, Vitest.
+One repository, npm workspaces, TypeScript everywhere, Node 22 LTS.
 
-**Canvas renderer: our own SVG scene, no Three.js, no React Flow.** An isometric view is a fixed 2D projection, so plain SVG
-draws it exactly (the reference site does not use Three.js either); `design/design-system.html` contains a working prototype
-of the block, cylinder, plate, zone, sticker and connection drawing. Three.js would only pay off for free camera orbit or
-perspective. React Flow assumes rectangular nodes in screen space and would have to be fought for diamond footprints,
-painter's order and grid-axis routing. Pan and zoom: `d3-zoom`. Hit testing in ground cells, drag with snap, box select,
-connecting, routing and keyboard access are our code: **the largest cost of M1**. Export: SVG directly, PNG via a canvas.
+```
+packages/engine   file format + zod schema, rules, simulation engine, scenario and lab formats.
+                  Plain TypeScript: no DOM, no framework, no clock, no Math.random. Fully unit-tested.
+apps/editor       the editor: a static single-page app (Vite build), embeddable by iframe.
+apps/checker      the checker service: a small HTTP service around packages/engine, one Docker container.
+tools/            fetch_icons.py and other scripts.   design/   tokens, icons, design page.
+```
 
-Code panel: CodeMirror 6 with a small grammar; auto-layout: elkjs in a Web Worker. Simulation engine: a pure TypeScript
-package with no DOM, run in a Web Worker in the browser (section 13.4). Checker service: a small Node app, one container,
-around the same rules and simulation packages (proposed, open decision 9). Fonts bundled with `@fontsource` (JetBrains Mono, IBM Plex Sans). Icons from
-`tools/fetch_icons.py`, cleaned through an allowlist before they are bundled.
+**Editor (`apps/editor`)**
+- React 19, TypeScript, Vite (a static SPA, no server rendering: no Next.js).
+- Tailwind CSS 4 with our `design/tokens.css`; shadcn/ui (Radix) for panels, menus, dialogs, inputs.
+- State: Zustand. The diagram store holds the file; a separate simulation store holds the latest tick. Components subscribe
+  to their own slice (one block reads only its own numbers), so a tick or a drag re-renders only what changed.
+- **Canvas renderer: our own SVG scene. No Three.js, no WebGL, no React Flow.** An isometric view is a fixed 2D projection,
+  so SVG draws it exactly, and React Flow assumes rectangular nodes in screen space. Pan and zoom: `d3-zoom`. Hit testing in
+  ground cells, drag with snap, box select, connecting, grid routing and keyboard access are our code (the largest cost of
+  M1). The design page's script is the reference geometry.
+- Fast paths stay out of React: dragging moves the block directly and writes the store once on drop; traffic dots are SVG
+  animations (still dots under reduced motion); the simulation worker posts at most 10 updates a second.
+- Web Workers for the simulation and for auto-layout (elkjs), talked to through Comlink.
+- Code view: CodeMirror 6 with a small grammar for our syntax.
+- Export: SVG directly, PNG by drawing that SVG to a canvas.
+- Fonts bundled with `@fontsource` (JetBrains Mono, IBM Plex Sans); icons from `tools/fetch_icons.py`. No third-party requests.
+- Interface strings in one file per language, English only for now, so a translation needs no code change.
+
+**Checker service (`apps/checker`)**
+- Hono on Node 22, TypeScript, running the same `packages/engine` the browser uses, so a score always matches what the
+  student saw. Endpoints: `POST /v1/check`, `GET /v1/health`.
+- Stateless: no database, no accounts, no student data. Every request body is untrusted: zod schema and the size limits of
+  section 6, then rules and simulations in a `worker_threads` worker with a time limit and a memory limit (`resourceLimits`).
+- One API key per host (`Authorization: Bearer`), a rate limit per key, results stamped with the `engine` version.
+- One Docker container. First deployment: next to labsite on the instructor's server, on the same Docker network, so labsite
+  (Flask) calls it at an internal address and it is not exposed to the internet.
+- Not Python (the engine would exist twice and drift), not NestJS (boilerplate for two endpoints), not Express (older,
+  untyped), not free serverless or edge plans (CPU-time limits can cut a simulation short).
+
+**Later, only when wanted:** read-only share links stored in SQLite in the same service (long unguessable ids, no accounts;
+Postgres only if it outgrows one server); real-time co-editing with Yjs and a Hocuspocus server in the same service.
+
+**Quality tools:** Vitest (engine, stores, components), Playwright (editor at 1280 × 720, 1366 × 768, 1536 × 864 and
+1920 × 1080, light and dark), a determinism test that runs the same scenario in Node and in a browser worker and compares
+the results exactly. GitHub Actions: typecheck, test, build on every push; the editor deploys to GitHub Pages from `main`.
 
 ## 11. Milestones
 
@@ -283,39 +314,51 @@ around the same rules and simulation packages (proposed, open decision 9). Fonts
 | M4 | **Simulator** (section 13): Simulate mode, scenarios, engine in a Web Worker, results and verdict, capacity settings, scenario files | The design page's Screen E works on a real diagram at 1280 × 720; the same scenario gives the same numbers in the browser and in Node |
 | M5 | **Labs** (section 14): lab files, budget and locks, behaviour checks, server re-run through the checker API; labsite runs a lab | One real lab used in class, scored on the server |
 
-## 12. Open decisions
+## 12. Decisions
 
-1. Product name (working name "Archboard").
-2. AWS icon files: commit them to the public repository, or keep fetching them at build time (now git-ignored).
-3. Hosting (needed for the iframe embed): GitHub Pages, Vercel, or a server with its own subdomain.
-4. More packs (Google Cloud, Azure, Kubernetes): which, and after reading whose icon terms.
-5. Text syntax: approve the draft in section 4 before M2.
-6. AI first draft from a prompt: wanted, and who pays for the model calls?
-7. UI language: English only, or more languages later.
-8. Simulation engine model: **rate-based with a fixed 1 s step (proposed)**, or discrete-event (one request at a time: closer
-   p95, heavier, harder to keep identical across runtimes). Section 13.4.
-9. One engine for browser and server: **the same TypeScript packages in a Web Worker and in a Node checker service
-   (proposed)**, or a Python port for Python hosts. The proposal drops the earlier Python `archboard-check` package.
-10. The default numbers in the behaviour table (section 13.3): the instructor should review them so they feel right to
-    students, even though they are indicative.
-11. Lab budget: a total instance count (proposed for M5), or a cost model later?
-12. Scenario files: embed the diagram (one file to share) or reference it by title and hash? Both are allowed in the draft.
-13. Narration in step-through: role names only, or the active pack's product names (draft: product names, logic by role)?
+### Decided by the instructor (2026-11-20)
 
-Decided by the instructor (2026-11-20): separate project; plan and design first; soft neo-brutalism with the reference
-site's look and 3D blocks; Eraser-like features; integration only through an API or plugin; small rounded edges on blocks;
-real product icons; **generic for any system architecture, not tied to AWS or one course**; built for 16:9 laptops
-(15.6") and monitors (22" and up).
+Separate project; plan and design first; soft neo-brutalism with the reference site's look and 3D blocks; Eraser-like
+features; integration only through an API or plugin; small rounded edges on blocks; real product icons; **generic for any
+system architecture, not tied to AWS or one course**; built for 16:9 laptops (15.6") and monitors (22" and up).
 
-Decided by the instructor (simulator and labs): add a **simulator** after M3 that runs problem scenarios (load, block, zone
-and region failures, slow database, cache misses, queue backlog, link cut) with a step-through and narration, per-block
-capacity settings with role defaults so a diagram works with no settings, results on the canvas and in a panel, a plain
-verdict naming the bottleneck or single point of failure, and versioned scenario files. It is a **teaching model with
-indicative numbers**, pure code over the diagram JSON in a Web Worker, never a cloud emulator, never deploys anything,
-reads roles not products, adds only optional fields (v1 files still open), and works at 1280 × 720 with our tokens and both
-themes. **Labs** come after the simulator as a host add-on: brief, starting diagram, scenarios, behaviour checks; the host
-re-runs the simulation on its server through the checker API to score. Learning mode and labs stay add-ons; the core stays
-course-neutral.
+Simulator and labs: add a **simulator** after M3 that runs problem scenarios (load, block, zone and region failures, slow
+database, cache misses, queue backlog, link cut) with a step-through and narration, per-block capacity settings with role
+defaults so a diagram works with no settings, results on the canvas and in a panel, a plain verdict naming the bottleneck or
+single point of failure, and versioned scenario files. It is a **teaching model with indicative numbers**, pure code over the
+diagram JSON in a Web Worker, never a cloud emulator, never deploys anything, reads roles not products, adds only optional
+fields (v1 files still open), and works at 1280 × 720 with our tokens and both themes. **Labs** come after the simulator as a
+host add-on: brief, starting diagram, scenarios, behaviour checks; the host re-runs the simulation on its server through the
+checker API to score. Learning mode and labs stay add-ons; the core stays course-neutral.
+
+### Decided on the instructor's behalf (2026-11-20, "decide for me and go with the best practice")
+
+Each can be reversed; the reason is given so a later change knows what it trades.
+
+| # | Decision | Reason |
+|---|---|---|
+| 1 | **M0 design approved**; M1 may start. | The design page and this spec cover every M1 screen. |
+| 2 | **Canvas: our own SVG renderer** (no Three.js, no React Flow). | The only way to get the chosen isometric blocks with grid routing; costs the most in M1. |
+| 3 | **File stores ground grid cells and roles**, never pixels or product names. | Packs, the flat view, the simulator and checks all rely on it. |
+| 4 | **Stack as in section 10**: React 19 + Vite + Zustand + shadcn editor; one TypeScript engine package; Hono checker service. | Fewest mistakes for AI-assisted building, shadcn is React-first, labsite's portal is React; one engine means marks never disagree with the browser. |
+| 5 | **Name "Archboard" stays the working name.** | Renaming is cheap until a public launch. A trademark search comes before any public launch (still open, below). |
+| 6 | **AWS icon files are fetched at build time, not committed.** | AWS's wording covers making diagrams; redistributing the files in a public repository is a separate question, so the cautious choice. |
+| 7 | **Draft text syntax (section 4) approved**, refined while building M2. | Good enough to build against; small changes are cheap before M2 ships. |
+| 8 | **Hosting**: the editor on GitHub Pages; the checker service in Docker next to labsite on the instructor's server, internal only. | Free, already where the repository is; the checker needs no public address. |
+| 9 | **One TypeScript engine** in the browser's Web Worker and in the Node checker; the Python `archboard-check` package is dropped. | A port would drift and students would dispute marks. labsite calls the checker over HTTP. |
+| 10 | **Engine: rate-based, fixed 1 s step**, deterministic (section 13.4). Discrete-event is not planned. | Fast, simple, identical in browser and server; per-request detail is not needed for a teaching model. |
+| 11 | **Behaviour table (13.3) adopted as the starting defaults**, tuned during M4 testing with real diagrams. | Indicative by design; tuning needs a working engine. |
+| 12 | **Scenario files**: saved with a reference to the diagram (title and hash); "Export with diagram" embeds it for sharing. | Small files by default, one-file sharing when wanted. |
+| 13 | **Step-through narration** uses the active pack's product names; the logic uses roles. | Reads naturally ("RDS"), stays pack-independent underneath. |
+| 14 | **Lab budget**: a total instance count in M5; a cost model only if wanted later. | Simple to explain and to check. |
+| 15 | **Next pack**: Kubernetes, after its icon terms are read; Google Cloud and Azure later. | Clearest open terms; useful for any stack. |
+| 16 | **No AI first draft** for now. | Needs an API key, a budget and a privacy decision. |
+| 17 | **English only**, with strings kept in one file so translation needs no code change. | Cheapest now, open later. |
+
+### Still open (for the instructor)
+
+- **Licence of this repository** (for example MIT for the code). Logos and AWS icons keep their own terms either way.
+- **Trademark check on the name** before any public launch.
 
 ## 13. Simulation (v3, M4)
 
@@ -414,7 +457,7 @@ Scenario file (its own format and version):
 | Messaging: queue, pub/sub, event stream | 10,000 req/s in, queue size 100,000, 5 ms | Async connections fill the queue; the consuming blocks drain it at their capacity; the backlog is the queue length; a full queue rejects. |
 | Observability, security | 1 × 1,000 req/s, 5 ms | On the request path only where drawn there. |
 
-### 13.4 Engine (proposed)
+### 13.4 Engine (decided: section 12, decision 10)
 
 - **Rate-based with a fixed 1 s step** over the scenario. Each tick: apply the events; push request rates from the sources
   along request connections, in id order; cap each block at instances × capacity, and the excess fails; fill and drain
@@ -438,7 +481,6 @@ Scenario file (its own format and version):
 - **Deterministic:** blocks and connections processed in id order, a seeded random generator only (no `Math.random`, no
   clock), values rounded each tick, and every result carries the `engine` version. The same TypeScript package runs in a
   Web Worker in the browser and in Node in the checker service; the server's result is the one that counts.
-- Not chosen yet: a discrete-event model (open decision 8).
 - Speed: a 50-block diagram and a 300 s scenario in under 1 s on a classroom laptop, off the main thread.
 
 ## 14. Labs (v4, M5, host add-on)
