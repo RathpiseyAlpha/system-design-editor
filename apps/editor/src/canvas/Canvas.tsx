@@ -405,14 +405,16 @@ export function Canvas() {
           <span>Pick the block to connect <b>{fromLabel}</b> to. Esc cancels.</span>
         </div>
       )}
-      {!presenting && !viewOnly && <div className="canvas-tools">
+      {!presenting && <div className="canvas-tools">
         <div className="seg proj-seg" role="group" aria-label="Look">
           <button type="button" aria-pressed={!flat} aria-label="3D view" title="Blocks in 3D" onClick={() => useEditor.getState().setFlat(false)}><Icon name="cube" /><span className="lbl">3D</span></button>
           <button type="button" aria-pressed={flat} aria-label="Flat view" title="Seen from above, like a plan" onClick={() => useEditor.getState().setFlat(true)}><Icon name="flat" /><span className="lbl">Flat</span></button>
         </div>
-        <button className="btn btn--sm" type="button" title="Arrange the whole diagram left to right" aria-label="Auto-layout" disabled={laying} onClick={layOut}>
-          <Icon name="layout" /><span className="lbl">{laying ? 'Laying out…' : 'Auto-layout'}</span>
-        </button>
+        {!viewOnly && (
+          <button className="btn btn--sm" type="button" title="Arrange the whole diagram left to right" aria-label="Auto-layout" disabled={laying} onClick={layOut}>
+            <Icon name="layout" /><span className="lbl">{laying ? 'Laying out…' : 'Auto-layout'}</span>
+          </button>
+        )}
         <button className="btn btn--sm" type="button" title="Rotate view (R)" aria-label="Rotate view" onClick={() => useEditor.getState().rotate()}><Icon name="rotate" /><span className="lbl">Rotate view</span></button>
         <button className="btn btn--sm" type="button" title="Present: the whole diagram, then each zone (P)" aria-label="Present" onClick={() => startPresenting()}><Icon name="play" /><span className="lbl">Present</span></button>
       </div>}

@@ -1,7 +1,8 @@
 // The editor's state. The diagram store holds the file and its history; components subscribe to the smallest slice they need.
 import { create } from 'zustand';
-import { fromTemplate, parseDiagramText, serializeDiagram, type Diagram, type DEdge, type DNode, type DZone, type ZoneKind } from '@archboard/engine';
+import { emptyDiagram, fromTemplate, parseDiagramText, serializeDiagram, type Diagram, type DEdge, type DNode, type DZone, type ZoneKind } from '@archboard/engine';
 import { isPack, type PackId } from '../catalog/packs.ts';
+import { readEmbed } from '../embed/protocol.ts';
 import { addEdge, addNode, addZone, deleteEdge, deleteNodes, deleteZone, moveNode, moveZone, resizeZone, updateEdge, updateNode, updateZone } from './ops.ts';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -12,6 +13,9 @@ const HISTORY = 100;
 const COALESCE_MS = 1500;
 const AUTOSAVE_KEY = 'archboard:autosave';
 const THEME_KEY = 'archboard:theme';
+
+/** Opened as an embed (/embed/?mode=view&origin=…)? Then the page shows what the host sends and never touches the autosave. */
+export const EMBED = typeof location === 'undefined' ? readEmbed('/', '') : readEmbed(location.pathname, location.search);
 
 interface EditorState {
   diagram: Diagram;
@@ -41,6 +45,8 @@ interface EditorState {
   step: number;
   /** The read-only embed (?mode=view): the same canvas with every edit off. Set once at start. */
   viewOnly: boolean;
+  /** In an embed: what the page is waiting for, or why it cannot start. */
+  embedNote: string | null;
   theme: Theme;
   save: SaveState;
   notice: Notice | null;
@@ -101,6 +107,7 @@ function readTheme(): Theme {
 
 /** The diagram saved in this browser, if there is one and it is still valid; otherwise the 3-tier template. */
 function startDiagram(): Diagram {
+  if (EMBED.embed) return emptyDiagram('Waiting for the diagram');
   try {
     const text = localStorage.getItem(AUTOSAVE_KEY);
     if (text) {
@@ -131,7 +138,8 @@ export const useEditor = create<EditorState>()((set, get) => ({
   side: 'text',
   presenting: false,
   step: 0,
-  viewOnly: false,
+  viewOnly: EMBED.embed,
+  embedNote: EMBED.embed ? EMBED.problem ?? 'Waiting for the host page to send a diagram.' : null,
   theme: readTheme(),
   save: 'saved',
   notice: null,
@@ -253,7 +261,7 @@ function keep(d: Diagram, id: string | null): string | null {
 // Autosave in this browser, half a second after the last change. Storage can be blocked: then the status says so.
 let timer: ReturnType<typeof setTimeout> | undefined;
 useEditor.subscribe((s, prev) => {
-  if (s.diagram === prev.diagram) return;
+  if (s.diagram === prev.diagram || EMBED.embed) return;
   clearTimeout(timer);
   timer = setTimeout(() => {
     try {

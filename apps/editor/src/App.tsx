@@ -68,7 +68,13 @@ function useShortcuts() {
         e.preventDefault();
         return;
       }
-      if (s.viewOnly) return;
+      // The view-only embed: the look can change (Rotate view, Present), the diagram cannot.
+      if (s.viewOnly) {
+        if (typing(e.target) || mod || e.altKey) return;
+        if (e.key.toLowerCase() === 'r') { e.preventDefault(); s.rotate(); }
+        else if (e.key.toLowerCase() === 'p') { e.preventDefault(); startPresenting(); }
+        return;
+      }
       if (e.key === 'Escape' && s.connectFrom) { s.setConnectFrom(null); return; }
       if (mod && e.key.toLowerCase() === 'z' && !typing(e.target)) { e.preventDefault(); if (e.shiftKey) s.redo(); else s.undo(); return; }
       if (mod && e.key.toLowerCase() === 'y' && !typing(e.target)) { e.preventDefault(); s.redo(); return; }
@@ -89,6 +95,8 @@ export function App() {
   const layout = useEditor((s) => s.layout);
   const side = useEditor((s) => s.side);
   const presenting = useEditor((s) => s.presenting);
+  const viewOnly = useEditor((s) => s.viewOnly);
+  const embedNote = useEditor((s) => s.embedNote);
   const canvas = (
     <div className="canvas-wrap">
       <NoticeBar />
@@ -106,6 +114,17 @@ export function App() {
         <Sprite />
         <div className="canvas-wrap"><Canvas /></div>
         <PresentBar />
+      </div>
+    );
+  }
+  if (viewOnly) {
+    return (
+      <div className="app app--view">
+        <Sprite />
+        <div className="canvas-wrap">
+          <Canvas />
+          {embedNote && <div className="embed-note" role="status"><Icon name="window" /><span>{embedNote}</span></div>}
+        </div>
       </div>
     );
   }

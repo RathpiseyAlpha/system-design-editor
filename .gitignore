@@ -15,4 +15,5 @@ apps/editor/dist/
 
 # Screenshots written by the browser checks
 editor-check*.png
+embed-check.png
 layout-sheet.png

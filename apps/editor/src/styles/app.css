@@ -310,3 +310,10 @@ button.pal-item:active { cursor: grabbing; }
 .present-where b { font: 600 15px/20px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40ch; }
 .present-where small { font: var(--t-hint); color: var(--muted); }
 .present-bar .flip { transform: scaleX(-1); }
+
+/* ---------------- M2: the view-only embed (canvas only; a note while it waits for the host) */
+.app--view { grid-template-rows: minmax(0, 1fr); }
+.embed-note { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 4; display: flex; gap: 10px; align-items: center;
+  max-width: min(440px, calc(100% - 32px)); padding: 12px 14px; background: var(--sheet); border: var(--bw) solid var(--edge);
+  border-radius: var(--r-control); box-shadow: var(--pop); font: 400 14px/20px var(--font-prose); }
+.embed-note svg { width: 18px; height: 18px; flex: none; }

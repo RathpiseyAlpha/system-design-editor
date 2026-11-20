@@ -11,5 +11,11 @@ export default defineConfig({
   plugins: [react()],
   server: { fs: { allow: [repo] } },
   // Icons stay separate files (loaded only when shown) instead of being inlined into the script.
-  build: { target: 'es2022', sourcemap: true, assetsInlineLimit: (file) => (file.endsWith('.svg') ? false : undefined) },
+  // Two pages, one app: the editor, and /embed/ (the read-only view a host page puts in an iframe, SPEC section 8.1).
+  build: {
+    target: 'es2022',
+    sourcemap: true,
+    assetsInlineLimit: (file) => (file.endsWith('.svg') ? false : undefined),
+    rollupOptions: { input: { main: fileURLToPath(new URL('index.html', import.meta.url)), embed: fileURLToPath(new URL('embed/index.html', import.meta.url)) } },
+  },
 });

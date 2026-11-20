@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Archboard embed test host</title>
+  <style>
+    body { margin: 0; padding: 16px; font: 15px/1.5 system-ui, sans-serif; background: #eee; display: grid; gap: 12px; }
+    iframe { width: 100%; height: 420px; border: 2px solid #222; border-radius: 10px; background: #fff; }
+    pre { margin: 0; max-height: 160px; overflow: auto; background: #fff; padding: 8px; border: 1px solid #aaa; }
+  </style>
+</head>
+<body>
+  <!--
+    A stand-in host page for the read-only embed (SPEC section 8.1), used by tools/check_embed.py. Serve this folder on a
+    second origin (python -m http.server 8765 --directory tools) and open http://localhost:8765/embed-host.html?editor=<url of
+    the editor's /embed/ page>. The first frame declares this page's origin and is sent a diagram when it says ready. The
+    second declares another origin, so it must ignore everything this page sends it.
+  -->
+  <b>Declared origin: this page</b>
+  <iframe id="good" title="Diagram, declared origin"></iframe>
+  <b>Declared origin: another site (must ignore this page)</b>
+  <iframe id="bad" title="Diagram, other origin"></iframe>
+  <pre id="out"></pre>
+  <script>
+    const editor = new URL(new URLSearchParams(location.search).get('editor') || 'http://localhost:4319/embed/');
+    const good = document.getElementById('good'), bad = document.getElementById('bad');
+    good.src = `${editor.href}?mode=view&origin=${encodeURIComponent(location.origin)}`;
+    bad.src = `${editor.href}?mode=view&origin=${encodeURIComponent('http://localhost:9')}`;
+
+    const DIAGRAM = {
+      format: 'archboard', version: 1, title: 'Embedded shop', show: 'generic',
+      zones: [{ id: 'z1', kind: 'network', label: 'net', x: 2, y: -1, w: 9, h: 7 }],
+      nodes: [
+        { id: 'n1', role: 'client', label: 'Visitors', x: -1, y: 2 },
+        { id: 'n2', role: 'load-balancer', label: 'lb', x: 4, y: 2, zone: 'z1' },
+        { id: 'n3', role: 'vm', label: 'web', x: 8, y: 2, zone: 'z1' },
+      ],
+      edges: [{ id: 'e1', from: 'n1', to: 'n2', kind: 'request', label: 'HTTPS' }, { id: 'e2', from: 'n2', to: 'n3', kind: 'request' }],
+    };
+
+    window.log = [];
+    const show = () => { document.getElementById('out').textContent = JSON.stringify(window.log, null, 1); };
+    addEventListener('message', (e) => {
+      if (e.origin !== editor.origin) return;
+      window.log.push({ from: e.source === good.contentWindow ? 'good' : e.source === bad.contentWindow ? 'bad' : '?', ...e.data });
+      show();
+      if (e.source === good.contentWindow && e.data.type === 'ready') {
+        good.contentWindow.postMessage({ type: 'load', v: 1, diagram: DIAGRAM }, editor.origin);
+      }
+      if (e.source === good.contentWindow && e.data.type === 'loaded' && !window.sentBroken) {
+        // A broken diagram must be refused with an error, and the diagram already shown must stay.
+        window.sentBroken = true;
+        good.contentWindow.postMessage({ type: 'load', v: 1, diagram: { format: 'archboard', version: 1, nodes: [{ id: 'x' }] } }, editor.origin);
+        good.contentWindow.postMessage({ type: 'setTheme', v: 1, theme: 'dark' }, editor.origin);
+      }
+    });
+    // The other frame never says ready to this page (its messages go to its own declared origin), so send it a diagram anyway.
+    bad.addEventListener('load', () => setTimeout(() => {
+      bad.contentWindow.postMessage({ type: 'load', v: 1, diagram: DIAGRAM }, '*');
+      window.sentBad = true;
+    }, 1500));
+  </script>
+</body>
+</html>
