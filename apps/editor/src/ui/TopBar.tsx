@@ -1,5 +1,8 @@
+import { useRef } from 'react';
+import { serializeDiagram, TEMPLATES } from '@archboard/engine';
 import { useEditor, type Theme } from '../state/store.ts';
 import { PACKS, isPack } from '../catalog/packs.ts';
+import { Icon } from './Icon.tsx';
 
 /** The brand mark: a tiny compute block. */
 function Mark() {
@@ -15,19 +18,57 @@ function Mark() {
   );
 }
 
+const fileName = (title: string) => `${title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'diagram'}.archboard.json`;
+
 export function TopBar() {
   const title = useEditor((s) => s.diagram.title);
+  const save = useEditor((s) => s.save);
+  const canUndo = useEditor((s) => s.past.length > 0);
+  const canRedo = useEditor((s) => s.future.length > 0);
   const pack = useEditor((s) => s.pack);
-  const setPack = useEditor((s) => s.setPack);
   const theme = useEditor((s) => s.theme);
-  const setTheme = useEditor((s) => s.setTheme);
+  const { setPack, setTheme, setTitle, undo, redo, newFromTemplate, openText } = useEditor.getState();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const download = () => {
+    const d = useEditor.getState().diagram;
+    const url = URL.createObjectURL(new Blob([serializeDiagram(d)], { type: 'application/json' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: fileName(d.title) });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
     <header className="topbar">
       <span className="brand"><Mark />Archboard</span>
       <span className="vsep" />
-      <span className="doc-title" title={title}>{title}</span>
+      <input className="doc-title" aria-label="Diagram name" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
+      {save === 'saved' ? (
+        <span className="chip chip--ok" title="Every change is kept in this browser"><Icon name="check" />Saved</span>
+      ) : (
+        <span className="chip chip--warn" title="This browser blocks storage: use Save to keep your work"><Icon name="alert" />Not saved</span>
+      )}
       <span className="spacer" />
+      <button className="btn btn--icon btn--ghost" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}><Icon name="undo" /></button>
+      <button className="btn btn--icon btn--ghost" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" /></button>
+      <select className="input select file-select" aria-label="New diagram" value="" onChange={(e) => { if (e.target.value) newFromTemplate(e.target.value); }}>
+        <option value="">New</option>
+        {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
+      </select>
+      <button className="btn" type="button" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
+      <input
+        ref={fileInput}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) openText(await f.text(), f.name);
+        }}
+      />
+      <button className="btn" type="button" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
+      <span className="vsep" />
       <div className="seg pack-seg" role="group" aria-label="Show as">
         {PACKS.map((p) => (
           <button key={p.id} type="button" aria-pressed={pack === p.id} onClick={() => setPack(p.id)}>{p.name}</button>

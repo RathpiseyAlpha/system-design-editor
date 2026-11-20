@@ -78,3 +78,8 @@ export function zoneLabel(kind: ZoneKind, access: string | undefined, pack: Pack
   const name = pack === 'aws' ? AWS.zone_names[kind] ?? ZONE_KINDS[kind] : ZONE_KINDS[kind];
   return { kind: name, icon: pack === 'aws' ? iconUrl(AWS.groups[kind]?.icon) : null };
 }
+
+/** The open-source products a role can be shown as (empty when the pack has none). */
+export function ossProducts(role: string): { id: string; name: string; licence: string }[] {
+  return (OSS.products[role] ?? []).map(({ id, name, licence }) => ({ id, name, licence }));
+}

@@ -1,12 +1,15 @@
 // The 3D canvas: an SVG scene in painter's order inside one transformed group. d3-zoom pans and zooms that group directly
 // (no React render per frame); a press on a block never starts a pan.
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { select } from 'd3-selection';
-import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
+import { zoom, zoomIdentity, zoomTransform, type ZoomBehavior } from 'd3-zoom';
 import type { Diagram, DZone } from '@archboard/engine';
 import { useEditor } from '../state/store.ts';
 import { Block, Pill, Wire, ZoneShape, ZoneTab } from './parts.tsx';
-import { P, LIFT, bounds, paintOrder, route, f, type Pt } from './geometry.ts';
+import { P, LIFT, bounds, paintOrder, route, snap, toGround, f, type Pt } from './geometry.ts';
+
+export const ROLE_MIME = 'application/x-archboard-role';
+const ARROWS: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
 import { Icon } from '../ui/Icon.tsx';
 
 const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
@@ -32,10 +35,21 @@ function zoneDepthOrder(zones: DZone[]): DZone[] {
   return [...zones].sort((a, b) => depth(a) - depth(b));
 }
 
-function Scene({ d }: { d: Diagram }) {
+interface SceneProps {
+  d: Diagram;
+  onBlockPointerDown: (e: PointerEvent<SVGGElement>, id: string) => void;
+  onBlockKeyDown: (e: KeyboardEvent<SVGGElement>, id: string) => void;
+}
+
+function Scene({ d: doc, onBlockPointerDown, onBlockKeyDown }: SceneProps) {
   const pack = useEditor((s) => s.pack);
   const selected = useEditor((s) => s.selected);
-  const select_ = useEditor((s) => s.select);
+  const drag = useEditor((s) => s.drag);
+  // While a block is dragged it is drawn (with its connections) at the drag position; the file changes only on drop.
+  const d = useMemo(
+    () => (drag ? { ...doc, nodes: doc.nodes.map((n) => (n.id === drag.id ? { ...n, x: drag.x, y: drag.y } : n)) } : doc),
+    [doc, drag],
+  );
   const byId = useMemo(() => new Map(d.nodes.map((n) => [n.id, n])), [d.nodes]);
   const wires = useMemo(
     () =>
@@ -65,8 +79,8 @@ function Scene({ d }: { d: Diagram }) {
           node={n}
           pack={pack}
           selected={selected === n.id}
-          onPointerDown={(_, id) => select_(id)}
-          onKeyDown={(ev, id) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select_(id); } }}
+          onPointerDown={onBlockPointerDown}
+          onKeyDown={onBlockKeyDown}
         />
       ))}
       {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} />)}
@@ -79,6 +93,7 @@ export function Canvas() {
   const diagram = useEditor((s) => s.diagram);
   const docKey = useEditor((s) => s.docKey);
   const select_ = useEditor((s) => s.select);
+  const add = useEditor((s) => s.add);
   const svgRef = useRef<SVGSVGElement>(null);
   const layerRef = useRef<SVGGElement>(null);
   const zoomLabel = useRef<HTMLSpanElement>(null);
@@ -101,8 +116,77 @@ export function Canvas() {
       });
     select(svg).call(z).on('dblclick.zoom', null);
     zoomRef.current = z;
+    // Tell the store where the middle of the visible canvas is, for blocks added from the palette.
+    useEditor.setState({
+      viewCenter: () => {
+        const [sx, sy] = zoomTransform(svg).invert([svg.clientWidth / 2, svg.clientHeight / 2]);
+        const [gx, gy] = toGround(sx, sy);
+        return [snap(gx), snap(gy)];
+      },
+    });
     return () => { select(svg).on('.zoom', null); };
   }, []);
+
+  /** The ground cell under a point of the window. */
+  const groundAt = (clientX: number, clientY: number): [number, number] => {
+    const svg = svgRef.current!, rect = svg.getBoundingClientRect();
+    const [sx, sy] = zoomTransform(svg).invert([clientX - rect.left, clientY - rect.top]);
+    const [gx, gy] = toGround(sx, sy);
+    return [snap(gx), snap(gy)];
+  };
+
+  // Drag a block: snap to half cells, draw it at the drag position, commit once on drop (one undo step).
+  const onBlockPointerDown = useCallback((e: PointerEvent<SVGGElement>, id: string) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const st = useEditor.getState();
+    st.select(id);
+    const node = st.diagram.nodes.find((n) => n.id === id);
+    const svg = svgRef.current;
+    if (!node || !svg) return;
+    const k = zoomTransform(svg).k, x0 = e.clientX, y0 = e.clientY;
+    let to: [number, number] = [node.x, node.y];
+    const onMove = (ev: globalThis.PointerEvent) => {
+      const [dgx, dgy] = toGround((ev.clientX - x0) / k, (ev.clientY - y0) / k);
+      const next: [number, number] = [snap(node.x + dgx), snap(node.y + dgy)];
+      if (next[0] !== to[0] || next[1] !== to[1]) { to = next; useEditor.getState().setDrag({ id, x: to[0], y: to[1] }); }
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      const s = useEditor.getState();
+      s.setDrag(null);
+      if (to[0] !== node.x || to[1] !== node.y) s.move(id, to[0], to[1]);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }, []);
+
+  // Keyboard on a focused block: Enter or Space selects, arrows move one cell along the grid, Delete removes it.
+  const onBlockKeyDown = useCallback((e: KeyboardEvent<SVGGElement>, id: string) => {
+    const s = useEditor.getState();
+    const step = ARROWS[e.key];
+    if (e.key === 'Enter' || e.key === ' ') s.select(id);
+    else if (step) {
+      const n = s.diagram.nodes.find((x) => x.id === id);
+      if (n) { s.select(id); s.move(id, n.x + step[0], n.y + step[1]); }
+    } else if (e.key === 'Delete' || e.key === 'Backspace') s.remove([id]);
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (e.dataTransfer.types.includes(ROLE_MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+  };
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    const role = e.dataTransfer.getData(ROLE_MIME);
+    if (!role) return;
+    e.preventDefault();
+    add(role, groundAt(e.clientX, e.clientY));
+  };
 
   const fit = useCallback(() => {
     const svg = svgRef.current, z = zoomRef.current;
@@ -122,7 +206,7 @@ export function Canvas() {
   };
 
   return (
-    <div className="canvas">
+    <div className="canvas" onDragOver={onDragOver} onDrop={onDrop}>
       <svg
         ref={svgRef}
         className="iso"
@@ -132,7 +216,7 @@ export function Canvas() {
       >
         <g ref={layerRef}>
           <Grid />
-          <Scene d={diagram} />
+          <Scene d={diagram} onBlockPointerDown={onBlockPointerDown} onBlockKeyDown={onBlockKeyDown} />
         </g>
       </svg>
       <div className="zoombar">

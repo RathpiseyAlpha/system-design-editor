@@ -7,7 +7,10 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M0 done and approved (2026-11-20); M1 is next.** No application code yet. What exists:
+**M1 in progress (2026-11-20).** Slices 1 to 3 of 5 are done: the engine package (format, roles, templates), the editor
+shell with the 3D canvas, and editing (drag with snap, arrow keys, add from the palette, delete, undo and redo, autosave,
+New, Open, Save, inspector). Next: slice 4 (create and nest zones, draw connections) and slice 5 (export, template picker,
+rotate view, checks at four sizes in both themes). What exists besides the code:
 
 - `SPEC.md`: the product spec (users, scope by version, catalog and packs, file format, rule engine, embed and checker APIs,
   screen sizes, stack, milestones, decisions). It is the scope: change it first when the scope changes.
@@ -19,7 +22,8 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 - `tools/fetch_icons.py`: fetches, cleans and catalogs the icons into `design/icons/` (`manifest.json`, `catalog.js`, `oss/`,
   `aws/`). `design/icons/SOURCES.md` records sources, pins and terms.
 
-Next is M1 (SPEC section 11): the repository layout and stack of SPEC section 10, then the editor core.
+The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vite). Pure logic lives in `canvas/geometry.ts` and
+`state/ops.ts`; the store (`state/store.ts`) adds history and autosave; the SVG parts are in `canvas/parts.tsx`.
 
 ## Decided by the instructor (2026-11-20; do not reopen without them)
 
@@ -98,6 +102,10 @@ Next is M1 (SPEC section 11): the repository layout and stack of SPEC section 10
 - `python -I tools/fetch_icons.py`: fetch and clean the icons, write `design/icons/` (downloads cached in the system temp folder).
 - Look at the design page: open `design/design-system.html` in a browser (add `#light` or `#dark` to force a theme).
   Headless check: `chrome --headless=new --allow-file-access-from-files --window-size=1400,9200 --screenshot=out.png "file:///.../design/design-system.html#light"`.
-- When the app exists (Vite): the path contains `&`, so `npm run` fails on this machine; run tools directly, for example
-  `node node_modules/vite/bin/vite.js build` and `node node_modules/vitest/vitest.mjs run`. On this machine `node` is 22 and
-  `python` is 3.12.
+- The path contains `&`, so `npm run` fails on this machine: run the tools directly. `npm install` works; use
+  `--cache <a folder in the scratchpad>` if it reports EEXIST. On this machine `node` is 22 and `python` is 3.12.
+- Type check: `node node_modules/typescript/bin/tsc -p tsconfig.json`. Tests: `node node_modules/vitest/vitest.mjs run`.
+- Build (in `apps/editor`): `node ../../node_modules/vite/bin/vite.js build`; dev server: `... vite.js` without `build`.
+- Browser check (real mouse and keyboard in headless Chrome): start `node ../../node_modules/vite/bin/vite.js preview --port 4319
+  --strictPort` in `apps/editor`, then `python -I tools/check_editor.py http://localhost:4319/ out.png 1280 720`. Stop the
+  preview afterwards. Add a check there for every new interaction.
