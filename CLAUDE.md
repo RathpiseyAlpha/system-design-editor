@@ -17,18 +17,26 @@ Instructor and owner: Heng Rathpisey. Repository: https://github.com/RathpiseyAl
 
 Next is M1 (SPEC section 11), only after the instructor approves the design.
 
-## Decisions already taken (do not reopen without the instructor)
+## Decided by the instructor (2026-11-20; do not reopen without them)
 
-- **Separate project.** Its own folder, repo, build and release. Hosts (the lab site `../labsite`, the student portal) use it
-  only through the embed API (iframe + postMessage, optional JS mount) and the checker API (HTTP or the Python package);
-  SPEC section 8. Never import labsite code here, and never add accounts, marks or deadlines here: those belong to the host.
-- **3D by default, drawn as SVG.** Isometric projection of ground grid cells. No Three.js, no WebGL, no React Flow; pan and
-  zoom with `d3-zoom`. A flat view of the same file exists for dense diagrams and printing.
-- **The file stores ground cells**, never pixels or React state (SPEC section 6). The checker reads roles, zones and edges, never positions.
+- **Separate project.** Its own folder, repo, build and release, with its own CLAUDE.md and SPEC.md. Hosts (the lab site
+  `../labsite`, the student portal) use it through an API or plugin: SPEC section 8 proposes the embed API (iframe +
+  postMessage, optional JS mount) and the checker API. Never import labsite code here, and never add accounts, marks or
+  deadlines here: those belong to the host.
+- **Plan and design first**, build after approval.
+- **Look:** soft neo-brutalism combined with designed-to-scale.vercel.app (warm paper, ink outlines, hard offset shadows, mono
+  type), and **3D (isometric) style** preferred. Use our tokens; do not copy that site's colour values, artwork or text.
+- **Eraser.io-like features** (diagram as code kept in sync with the canvas, auto-layout, notes, embed), with our own syntax and
+  look (SPEC section 4, v1.5).
+
+## Proposed in M0, waiting for approval (change freely if the instructor decides otherwise)
+
+- **Canvas drawn as our own SVG scene**: isometric projection of ground grid cells, no Three.js, no React Flow, pan and zoom
+  with `d3-zoom`, a flat view of the same file. Trade-off: hit testing, drag with snap, box select, connecting, routing and
+  keyboard access are all our code, which is the largest cost of M1 (SPEC section 10).
+- **The file stores ground cells**, never pixels or view state (SPEC section 6). The checker reads roles, zones and edges, never positions.
 - **Role first, product second.** A node's `role` is what the checker reads; AWS or open-source product is how it is shown.
-- **Look:** soft neo-brutalism after designed-to-scale.vercel.app: warm paper, ink outlines, hard offset shadows, JetBrains
-  Mono, a green highlighter for active and selected. Use our tokens; do not copy that site's colour values, artwork or text.
-- **Diagram as code** is an Eraser-like feature with our own syntax (SPEC section 4, v1.5). Do not copy Eraser's syntax or look.
+- The working name "Archboard", the text syntax draft, JetBrains Mono + IBM Plex Sans, the green highlighter accent.
 
 ## Rules
 

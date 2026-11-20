@@ -118,8 +118,9 @@ isometric blocks on a faint diagonal grid). Tokens, components and screens: `des
 
 ## 5. Service catalog (v1)
 
-Each entry: role id, category, AWS product, open-source default (alternatives). Licences checked 2026-11: Vault and
-Redis/Elasticsearch moved to source-available licences, so the defaults are their open forks.
+Each entry: role id, category, AWS product, open-source default (alternatives). **Licences to verify before M1:** Vault,
+Redis and Elasticsearch changed their licences in recent years (and some have since added an open-source option again), so
+the defaults below use their community forks (OpenBao, Valkey, OpenSearch) until each licence is checked from its source.
 
 | Role id | Category | AWS | Open source |
 |---|---|---|---|
@@ -262,7 +263,7 @@ labsite's own rules (hidden until published, server-side validation, no student 
 Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix) for the panels and controls, zod, Vitest.
 
 **Canvas renderer: our own SVG scene, no Three.js, no React Flow.** An isometric view is a fixed 2D projection, so plain SVG
-draws it exactly (the reference site has no WebGL either); `design/design-system.html` already contains a working prototype of
+draws it exactly (the reference site does not use Three.js either); `design/design-system.html` already contains a working prototype of
 the block, cylinder, plate, zone and connection drawing. Three.js would only pay off for free camera orbit or perspective, which
 the spec does not want, and it adds about 150 KB and a harder accessibility story. React Flow (the earlier plan) assumes
 rectangular nodes in screen space and would have to be fought for diamond footprints, painter's order and grid-axis routing.
