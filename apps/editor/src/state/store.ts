@@ -35,6 +35,12 @@ interface EditorState {
   layout: 'canvas' | 'split' | 'code';
   /** Which document the side panel shows in Split and Code: the diagram as text, or its Markdown notes. */
   side: 'text' | 'notes';
+  /** Present mode: only the canvas, nothing can be changed, the arrow keys step from the whole diagram to each zone. */
+  presenting: boolean;
+  /** The present step being shown (0 is the whole diagram). */
+  step: number;
+  /** The read-only embed (?mode=view): the same canvas with every edit off. Set once at start. */
+  viewOnly: boolean;
   theme: Theme;
   save: SaveState;
   notice: Notice | null;
@@ -57,6 +63,8 @@ interface EditorState {
   setFlat: (flat: boolean) => void;
   setLayout: (l: 'canvas' | 'split' | 'code') => void;
   setSide: (side: 'text' | 'notes') => void;
+  present: (on: boolean) => void;
+  setStep: (step: number) => void;
   /** Replace the diagram's notes; typing is one undo step. */
   setNotes: (text: string) => void;
   /** Replace positions with an auto-layout: one undo step, and the view fits the result. */
@@ -121,6 +129,9 @@ export const useEditor = create<EditorState>()((set, get) => ({
   flat: false,
   layout: 'canvas',
   side: 'text',
+  presenting: false,
+  step: 0,
+  viewOnly: false,
   theme: readTheme(),
   save: 'saved',
   notice: null,
@@ -184,6 +195,8 @@ export const useEditor = create<EditorState>()((set, get) => ({
   setFlat: (flat) => set((s) => (s.flat === flat ? {} : { flat, drag: null, docKey: s.docKey + 1 })),
   setLayout: (layout) => set({ layout, connectFrom: null }),
   setSide: (side) => set({ side }),
+  present: (on) => set({ presenting: on, step: 0, selected: null, connectFrom: null, drag: null }),
+  setStep: (step) => set({ step }),
   setNotes: (text) => {
     const { notes: _old, ...rest } = get().diagram;
     get().commit(text ? { ...rest, notes: text } : rest, 'docnotes');

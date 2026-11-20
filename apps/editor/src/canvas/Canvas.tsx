@@ -9,6 +9,8 @@ import { moveZone, resizeZone } from '../state/ops.ts';
 import { Block, Pill, Wire, ZoneResize, ZoneShape, ZoneTab, zoneTabWidth } from './parts.tsx';
 import { projectionOf, clearFlatLabels, bounds, paintOrder, route, snap, f, rot, unrot, rotRect, unrotRect, rotateDiagram, placeLabels, blockBox, tabCandidates, edgeLabelCandidates, pillWidth, type Pt, type Turn } from './geometry.ts';
 import { Icon } from '../ui/Icon.tsx';
+import { presentSteps } from '../present/steps.ts';
+import { startPresenting } from '../present/PresentBar.tsx';
 import { runLayout } from '../layout/runLayout.ts';
 
 /** Drag-and-drop type for palette items: a role id, or "zone:<kind>[:<access>]". */
@@ -16,6 +18,12 @@ export const ROLE_MIME = 'application/x-archboard-role';
 const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 const ARROWS: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
 const NO_PAN = '[data-block], [data-zone-tab], [data-handle]';
+/** Present mode and the view-only embed: the canvas can be panned and zoomed, nothing else. */
+const readOnly = () => { const s = useEditor.getState(); return s.presenting || s.viewOnly; };
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PRESENT_ZOOM_MAX = 1.6;
+/** Room kept free under the diagram for the present bar. */
+const PRESENT_BAR = 72;
 
 const Grid = memo(function Grid({ flat }: { flat: boolean }) {
   const { P } = projectionOf(flat);
@@ -139,6 +147,10 @@ export function Canvas() {
   const docKey = useEditor((s) => s.docKey);
   const connectFrom = useEditor((s) => s.connectFrom);
   const flat = useEditor((s) => s.flat);
+  const presenting = useEditor((s) => s.presenting);
+  const step = useEditor((s) => s.step);
+  const viewOnly = useEditor((s) => s.viewOnly);
+  const anim = useRef(0);
   const svgRef = useRef<SVGSVGElement>(null);
   const layerRef = useRef<SVGGElement>(null);
   const zoomLabel = useRef<HTMLSpanElement>(null);
@@ -169,7 +181,7 @@ export function Canvas() {
       .filter((ev: Event) => {
         if (ev.type === 'wheel') return true;
         const target = ev.target as Element | null;
-        return !(ev as globalThis.MouseEvent).button && !target?.closest(NO_PAN);
+        return !(ev as globalThis.MouseEvent).button && (readOnly() || !target?.closest(NO_PAN));
       })
       .on('zoom', (ev) => {
         layerRef.current?.setAttribute('transform', ev.transform.toString());
@@ -220,7 +232,7 @@ export function Canvas() {
       // Press a block: in "Connect to" mode, connect; on a port, draw a connection; otherwise select and drag it
       // (snapped to half cells, drawn at the drag position, committed once on drop as one undo step).
       onBlockPointerDown: (e, id) => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || readOnly()) return;
         e.preventDefault();
         const st = useEditor.getState();
         if (st.connectFrom && st.connectFrom !== id) { st.connect(st.connectFrom, id); return; }
@@ -244,6 +256,7 @@ export function Canvas() {
       // Keyboard on a focused block: Enter or Space selects (or connects, in "Connect to" mode), arrows move one cell
       // along the grid, Delete removes it.
       onBlockKeyDown: (e, id) => {
+        if (readOnly()) return;
         const s = useEditor.getState();
         const arrow = ARROWS[e.key];
         const step = arrow ? unrot(arrow[0], arrow[1], s.turn) : undefined;
@@ -260,7 +273,7 @@ export function Canvas() {
       },
       // Drag a zone's tab: the zone moves with everything inside it.
       onZonePointerDown: (e, id) => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || readOnly()) return;
         e.preventDefault();
         useEditor.getState().select(id);
         const z = useEditor.getState().diagram.zones.find((x) => x.id === id);
@@ -281,7 +294,7 @@ export function Canvas() {
       },
       // Drag a selected zone's corner handle to resize it.
       onResizePointerDown: (e, id) => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || readOnly()) return;
         e.preventDefault();
         const z = useEditor.getState().diagram.zones.find((x) => x.id === id);
         if (!z) return;
@@ -306,16 +319,35 @@ export function Canvas() {
     [],
   );
 
-  const fit = useCallback(() => {
+  /** Fit a part of the diagram (all of it by default) into the canvas; glide there when asked, unless motion is reduced. */
+  const fit = useCallback((part?: Diagram, glide = false, most = 1, below = 0) => {
     const svg = svgRef.current, z = zoomRef.current;
     if (!svg || !z) return;
     const st = useEditor.getState();
-    const b = bounds(rotateDiagram(diagramRef.current, st.turn as Turn), projectionOf(st.flat)), W = svg.clientWidth, H = svg.clientHeight, pad = 48;
-    const s = Math.max(ZOOM_MIN, Math.min(1, (W - 2 * pad) / b.w, (H - 2 * pad) / b.h));
-    select(svg).call(z.transform, zoomIdentity.translate((W - b.w * s) / 2 - b.x0 * s, (H - b.h * s) / 2 - b.y0 * s).scale(s));
+    const b = bounds(rotateDiagram(part ?? diagramRef.current, st.turn as Turn), projectionOf(st.flat)), W = svg.clientWidth, H = svg.clientHeight, pad = 48;
+    const s = Math.max(ZOOM_MIN, Math.min(most, (W - 2 * pad) / b.w, (H - below - 2 * pad) / b.h));
+    const to = zoomIdentity.translate((W - b.w * s) / 2 - b.x0 * s, (H - below - b.h * s) / 2 - b.y0 * s).scale(s);
+    cancelAnimationFrame(anim.current);
+    if (!glide || reducedMotion()) { select(svg).call(z.transform, to); return; }
+    const from = zoomTransform(svg), t0 = performance.now(), D = 420;
+    const tick = (now: number) => {
+      const u = Math.min(1, (now - t0) / D), e = 1 - (1 - u) ** 3;
+      const k = from.k + (to.k - from.k) * e;
+      select(svg).call(z.transform, zoomIdentity.translate(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e).scale(k));
+      if (u < 1) anim.current = requestAnimationFrame(tick);
+    };
+    anim.current = requestAnimationFrame(tick);
   }, []);
   // Fit each newly loaded diagram once; after that the view is the user's.
   useEffect(() => { fit(); }, [docKey, fit]);
+  // Present mode: show the step's part, closer than 100% when a zone is small.
+  useEffect(() => {
+    if (!presenting) return;
+    const steps = presentSteps(diagramRef.current);
+    const part = steps[Math.min(step, steps.length - 1)]!.part;
+    const r = requestAnimationFrame(() => fit(part, true, PRESENT_ZOOM_MAX, PRESENT_BAR));
+    return () => cancelAnimationFrame(r);
+  }, [presenting, step, fit]);
 
   const zoomBy = (factor: number) => {
     const svg = svgRef.current, z = zoomRef.current;
@@ -324,6 +356,7 @@ export function Canvas() {
 
   // A click (not a pan) picks what is under it: a connection, a zone, or nothing.
   const onClick = (ev: MouseEvent) => {
+    if (readOnly()) return;
     const t = ev.target as Element;
     if (t.closest('[data-block], [data-zone-tab], [data-handle]')) return;
     const s = useEditor.getState();
@@ -334,11 +367,12 @@ export function Canvas() {
   };
 
   const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (readOnly()) return;
     if (e.dataTransfer.types.includes(ROLE_MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
   };
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     const item = e.dataTransfer.getData(ROLE_MIME);
-    if (!item) return;
+    if (!item || readOnly()) return;
     e.preventDefault();
     const at = groundAt(e.clientX, e.clientY);
     const s = useEditor.getState();
@@ -371,7 +405,7 @@ export function Canvas() {
           <span>Pick the block to connect <b>{fromLabel}</b> to. Esc cancels.</span>
         </div>
       )}
-      <div className="canvas-tools">
+      {!presenting && !viewOnly && <div className="canvas-tools">
         <div className="seg proj-seg" role="group" aria-label="Look">
           <button type="button" aria-pressed={!flat} aria-label="3D view" title="Blocks in 3D" onClick={() => useEditor.getState().setFlat(false)}><Icon name="cube" /><span className="lbl">3D</span></button>
           <button type="button" aria-pressed={flat} aria-label="Flat view" title="Seen from above, like a plan" onClick={() => useEditor.getState().setFlat(true)}><Icon name="flat" /><span className="lbl">Flat</span></button>
@@ -380,13 +414,14 @@ export function Canvas() {
           <Icon name="layout" /><span className="lbl">{laying ? 'Laying out…' : 'Auto-layout'}</span>
         </button>
         <button className="btn btn--sm" type="button" title="Rotate view (R)" aria-label="Rotate view" onClick={() => useEditor.getState().rotate()}><Icon name="rotate" /><span className="lbl">Rotate view</span></button>
-      </div>
-      <div className="zoombar">
+        <button className="btn btn--sm" type="button" title="Present: the whole diagram, then each zone (P)" aria-label="Present" onClick={() => startPresenting()}><Icon name="play" /><span className="lbl">Present</span></button>
+      </div>}
+      {!presenting && <div className="zoombar">
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}><Icon name="minus" /></button>
         <span ref={zoomLabel} className="zoom-val">100%</span>
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.25)}><Icon name="plus" /></button>
-        <button type="button" aria-label="Fit to screen" onClick={fit}><Icon name="fit" /></button>
-      </div>
+        <button type="button" aria-label="Fit to screen" onClick={() => fit()}><Icon name="fit" /></button>
+      </div>}
     </div>
   );
 }

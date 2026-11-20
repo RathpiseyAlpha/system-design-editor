@@ -5,6 +5,7 @@ import { Icon, Sprite } from './ui/Icon.tsx';
 import { TopBar } from './ui/TopBar.tsx';
 import { Palette, findService } from './ui/Palette.tsx';
 import { Inspector } from './ui/Inspector.tsx';
+import { PresentBar, startPresenting, stopPresenting, stepBy } from './present/PresentBar.tsx';
 
 // The text view loads only when it is opened, so the editor starts without CodeMirror.
 const CodePanel = lazy(() => import('./code/CodePanel.tsx'));
@@ -55,6 +56,19 @@ function useShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const s = useEditor.getState();
       const mod = e.ctrlKey || e.metaKey;
+      // Present mode takes the keys: step, jump to the ends, or leave. Nothing else can happen while presenting.
+      if (s.presenting) {
+        const k = e.key;
+        if (k === 'Escape') stopPresenting();
+        else if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') stepBy(1);
+        else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace') stepBy(-1);
+        else if (k === 'Home') stepBy(0, 0);
+        else if (k === 'End') stepBy(0, Infinity);
+        else return;
+        e.preventDefault();
+        return;
+      }
+      if (s.viewOnly) return;
       if (e.key === 'Escape' && s.connectFrom) { s.setConnectFrom(null); return; }
       if (mod && e.key.toLowerCase() === 'z' && !typing(e.target)) { e.preventDefault(); if (e.shiftKey) s.redo(); else s.undo(); return; }
       if (mod && e.key.toLowerCase() === 'y' && !typing(e.target)) { e.preventDefault(); s.redo(); return; }
@@ -63,6 +77,7 @@ function useShortcuts() {
       else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selected) { e.preventDefault(); s.remove([s.selected]); }
       else if (e.key.toLowerCase() === 'a') { e.preventDefault(); findService(); }
       else if (e.key.toLowerCase() === 'r') { e.preventDefault(); s.rotate(); }
+      else if (e.key.toLowerCase() === 'p') { e.preventDefault(); startPresenting(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -73,6 +88,7 @@ export function App() {
   useShortcuts();
   const layout = useEditor((s) => s.layout);
   const side = useEditor((s) => s.side);
+  const presenting = useEditor((s) => s.presenting);
   const canvas = (
     <div className="canvas-wrap">
       <NoticeBar />
@@ -84,6 +100,15 @@ export function App() {
       {side === 'notes' ? <NotesPanel /> : <CodePanel />}
     </Suspense>
   );
+  if (presenting) {
+    return (
+      <div className="app app--present">
+        <Sprite />
+        <div className="canvas-wrap"><Canvas /></div>
+        <PresentBar />
+      </div>
+    );
+  }
   return (
     <div className="app">
       <Sprite />

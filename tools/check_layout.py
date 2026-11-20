@@ -6,6 +6,7 @@ At each size and theme: the page never scrolls sideways, the top bar's controls 
 loading, the "Show as" control is visible (buttons or select), and no text is smaller than 12 px.
 """
 import base64
+import json
 import io
 import sys
 import time
@@ -66,6 +67,20 @@ for w, h in SIZES:
             shots.append((tag + " flat", base64.b64decode(data)))
             p.js("document.querySelector('button[aria-label=\"3D view\"]').click();")
             time.sleep(0.4)
+            # Present: only the canvas; the bar sits inside the window; the whole diagram is above the bar.
+            p.js("document.querySelector('button[aria-label=Present]').click();")
+            time.sleep(1.0)
+            pr = p.js("""
+              const de=document.documentElement, bar=document.querySelector('.present-bar').getBoundingClientRect();
+              const blocks=[...document.querySelectorAll('[data-block]')].map(b=>b.getBoundingClientRect());
+              return {sideways: de.scrollWidth>de.clientWidth, bar: bar.left>=0&&bar.right<=innerWidth&&bar.bottom<=innerHeight,
+                      clear: blocks.every(r=>r.bottom<=bar.top+1||r.right<=bar.left||r.left>=bar.right), chrome: !!document.querySelector('.topbar')};
+            """)
+            check(f"{tag} present: only the canvas, the bar fits, no block under the bar", not pr["sideways"] and pr["bar"] and pr["clear"] and not pr["chrome"], json.dumps(pr))
+            data = p.call("Page.captureScreenshot", format="png")["data"]
+            shots.append((tag + " present", base64.b64decode(data)))
+            p.js("[...document.querySelectorAll('.present-bar button')].find(b=>b.textContent.trim()==='Exit').click();")
+            time.sleep(0.5)
             # The same in Split view: text beside the canvas.
             p.js("document.querySelector('button[aria-label=Split]').click();")
             for _ in range(40):

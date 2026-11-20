@@ -335,6 +335,27 @@ try:
     p.js("document.querySelector('button[aria-label=\"Canvas\"]').click();")
     time.sleep(0.5)
 
+    # 18. Present: P shows only the canvas; arrows step to each zone; nothing can be dragged; Esc brings the editor back.
+    before = json.dumps(saved(p), sort_keys=True)
+    p.js("document.activeElement && document.activeElement.blur();")
+    key(p, "p", "KeyP", text="p")
+    time.sleep(1.0)
+    pr = p.js("return {on: !!document.querySelector('.app--present'), chrome: !!document.querySelector('.topbar, .palette, .insp, .statusbar'), where: document.querySelector('.present-where b')?.textContent};")
+    check("P presents only the canvas, starting with the whole diagram", pr["on"] and not pr["chrome"] and pr["where"] == saved(p)["title"], json.dumps(pr))
+    t0 = p.js("return document.querySelector('svg.iso > g').getAttribute('transform');")
+    key(p, "ArrowRight", "ArrowRight")
+    time.sleep(0.9)
+    where = p.js("return document.querySelector('.present-where b').textContent;")
+    t1 = p.js("return document.querySelector('svg.iso > g').getAttribute('transform');")
+    zones = {z["label"] for z in saved(p)["zones"]}
+    check("the right arrow moves the view to a zone", where in zones and t1 != t0, where)
+    x, y = center(p, '[data-block] .top')
+    drag_px(x, y, 120, 60)
+    check("nothing can be dragged while presenting", json.dumps(saved(p), sort_keys=True) == before)
+    key(p, "Escape")
+    time.sleep(0.6)
+    check("Esc leaves Present and the editor is back, the file unchanged", p.js("return !!document.querySelector('.topbar') && !document.querySelector('.app--present');") and json.dumps(saved(p), sort_keys=True) == before)
+
     # Leave a block selected for the screenshot.
     x, y = center(p, '[data-block="n5"] .top')
     p.call("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y, button="left", clickCount=1)

@@ -300,3 +300,13 @@ button.pal-item:active { cursor: grabbing; }
   background: var(--sheet); font: var(--t-hint); }
 .notes-foot code { font: inherit; font-weight: 600; }
 .insp .field .btn--sm { justify-self: start; margin-top: 4px; }
+
+/* ---------------- M2: Present mode (only the canvas, a bar to step through it) */
+.app--present { grid-template-rows: minmax(0, 1fr); position: relative; }
+.app--present .canvas-wrap { min-height: 0; }
+.present-bar { position: absolute; left: 50%; bottom: 20px; translate: -50% 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; max-width: calc(100% - 32px); background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-panel); box-shadow: var(--pop); }
+.present-where { display: grid; min-width: 0; padding: 0 6px; text-align: center; }
+.present-where b { font: 600 15px/20px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40ch; }
+.present-where small { font: var(--t-hint); color: var(--muted); }
+.present-bar .flip { transform: scaleX(-1); }
