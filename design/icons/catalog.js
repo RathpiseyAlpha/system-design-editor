@@ -173,6 +173,11 @@ window.ICON_CATALOG = {
       "name": "Image registry",
       "category": "compute",
       "shape": "low"
+    },
+    "custom": {
+      "name": "Custom block",
+      "category": "compute",
+      "shape": "box"
     }
   },
   "zone_kinds": {

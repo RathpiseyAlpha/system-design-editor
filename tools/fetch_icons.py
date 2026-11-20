@@ -127,25 +127,12 @@ CATALOG.update({
                   [("clickhouse", "ClickHouse", "ClickHouse", "Apache-2.0", si("clickhouse", "ClickHouse"))]),
 })
 
-# The neutral catalog every diagram is written in: role -> (generic name, category, block shape). Packs only rename and re-icon.
-ROLE_INFO = {
-    "client": ("Users", "client", "plate"), "mobile": ("Mobile app", "client", "plate"), "device": ("Device", "client", "plate"),
-    "external": ("External system", "client", "plate"), "web-app": ("Web front end", "compute", "box"),
-    "service": ("Service", "compute", "box"), "job": ("Batch job", "compute", "box"),
-    "dns": ("DNS", "network", "box"), "cdn": ("CDN", "network", "box"), "load-balancer": ("Load balancer", "network", "box"),
-    "api-gateway": ("API gateway", "network", "box"), "waf": ("Web firewall", "security", "box"), "nat": ("NAT", "network", "box"),
-    "vm": ("Virtual machine", "compute", "box"), "autoscaling": ("Autoscaling group", "compute", "box"),
-    "containers": ("Containers", "compute", "box"), "kubernetes": ("Kubernetes cluster", "compute", "box"),
-    "function": ("Function", "compute", "box"), "object-storage": ("Object storage", "storage", "low"),
-    "block-storage": ("Block storage", "storage", "low"), "file-storage": ("File storage", "storage", "low"),
-    "relational-db": ("Relational database", "database", "cyl"), "nosql-db": ("NoSQL database", "database", "cyl"),
-    "cache": ("Cache", "database", "cyl"), "search": ("Search index", "database", "cyl"), "warehouse": ("Data warehouse", "database", "cyl"),
-    "queue": ("Queue", "messaging", "box"), "pubsub": ("Pub/sub topic", "messaging", "box"), "stream": ("Event stream", "messaging", "box"),
-    "monitoring": ("Monitoring", "observe", "box"), "logs": ("Logs", "observe", "box"),
-    "identity": ("Identity", "security", "box"), "secrets": ("Secrets", "security", "box"), "registry": ("Image registry", "compute", "low"),
-}
-# Neutral zone kinds and what each pack calls them.
-ZONE_KINDS = {"region": "Region", "network": "Network", "zone": "Failure zone", "subnet": "Subnet", "group": "Group"}
+# The neutral catalog every diagram is written in (roles and zone kinds) lives in the engine package, the single source.
+# Packs only rename and re-icon it. The custom role has no pack products.
+_CORE = json.loads((ROOT / "packages" / "engine" / "src" / "roles.json").read_text(encoding="utf-8"))
+ROLE_INFO = {r: (v["name"], v["category"], v["shape"]) for r, v in _CORE["roles"].items()}
+# What the AWS pack calls each neutral zone kind.
+ZONE_KINDS = _CORE["zoneKinds"]
 AWS_ZONE_NAMES = {"region": "Region", "network": "VPC", "zone": "Availability Zone", "subnet": "Subnet", "group": "Group"}
 AWS_GROUPS = {"region": "Region_32.svg", "network": "Virtual-private-cloud-VPC_32.svg", "subnet-public": "Public-subnet_32.svg",
               "subnet-private": "Private-subnet_32.svg", "cloud": "AWS-Cloud_32.svg"}

@@ -1,0 +1,186 @@
+{
+  "roles": {
+    "client": {
+      "name": "Users",
+      "category": "client",
+      "shape": "plate"
+    },
+    "mobile": {
+      "name": "Mobile app",
+      "category": "client",
+      "shape": "plate"
+    },
+    "device": {
+      "name": "Device",
+      "category": "client",
+      "shape": "plate"
+    },
+    "external": {
+      "name": "External system",
+      "category": "client",
+      "shape": "plate"
+    },
+    "web-app": {
+      "name": "Web front end",
+      "category": "compute",
+      "shape": "box"
+    },
+    "service": {
+      "name": "Service",
+      "category": "compute",
+      "shape": "box"
+    },
+    "job": {
+      "name": "Batch job",
+      "category": "compute",
+      "shape": "box"
+    },
+    "dns": {
+      "name": "DNS",
+      "category": "network",
+      "shape": "box"
+    },
+    "cdn": {
+      "name": "CDN",
+      "category": "network",
+      "shape": "box"
+    },
+    "load-balancer": {
+      "name": "Load balancer",
+      "category": "network",
+      "shape": "box"
+    },
+    "api-gateway": {
+      "name": "API gateway",
+      "category": "network",
+      "shape": "box"
+    },
+    "waf": {
+      "name": "Web firewall",
+      "category": "security",
+      "shape": "box"
+    },
+    "nat": {
+      "name": "NAT",
+      "category": "network",
+      "shape": "box"
+    },
+    "vm": {
+      "name": "Virtual machine",
+      "category": "compute",
+      "shape": "box"
+    },
+    "autoscaling": {
+      "name": "Autoscaling group",
+      "category": "compute",
+      "shape": "box"
+    },
+    "containers": {
+      "name": "Containers",
+      "category": "compute",
+      "shape": "box"
+    },
+    "kubernetes": {
+      "name": "Kubernetes cluster",
+      "category": "compute",
+      "shape": "box"
+    },
+    "function": {
+      "name": "Function",
+      "category": "compute",
+      "shape": "box"
+    },
+    "object-storage": {
+      "name": "Object storage",
+      "category": "storage",
+      "shape": "low"
+    },
+    "block-storage": {
+      "name": "Block storage",
+      "category": "storage",
+      "shape": "low"
+    },
+    "file-storage": {
+      "name": "File storage",
+      "category": "storage",
+      "shape": "low"
+    },
+    "relational-db": {
+      "name": "Relational database",
+      "category": "database",
+      "shape": "cyl"
+    },
+    "nosql-db": {
+      "name": "NoSQL database",
+      "category": "database",
+      "shape": "cyl"
+    },
+    "cache": {
+      "name": "Cache",
+      "category": "database",
+      "shape": "cyl"
+    },
+    "search": {
+      "name": "Search index",
+      "category": "database",
+      "shape": "cyl"
+    },
+    "warehouse": {
+      "name": "Data warehouse",
+      "category": "database",
+      "shape": "cyl"
+    },
+    "queue": {
+      "name": "Queue",
+      "category": "messaging",
+      "shape": "box"
+    },
+    "pubsub": {
+      "name": "Pub/sub topic",
+      "category": "messaging",
+      "shape": "box"
+    },
+    "stream": {
+      "name": "Event stream",
+      "category": "messaging",
+      "shape": "box"
+    },
+    "monitoring": {
+      "name": "Monitoring",
+      "category": "observe",
+      "shape": "box"
+    },
+    "logs": {
+      "name": "Logs",
+      "category": "observe",
+      "shape": "box"
+    },
+    "identity": {
+      "name": "Identity",
+      "category": "security",
+      "shape": "box"
+    },
+    "secrets": {
+      "name": "Secrets",
+      "category": "security",
+      "shape": "box"
+    },
+    "registry": {
+      "name": "Image registry",
+      "category": "compute",
+      "shape": "low"
+    },
+    "custom": {
+      "name": "Custom block",
+      "category": "compute",
+      "shape": "box"
+    }
+  },
+  "zoneKinds": {
+    "region": "Region",
+    "network": "Network",
+    "zone": "Failure zone",
+    "subnet": "Subnet",
+    "group": "Group"
+  }
+}

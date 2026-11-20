@@ -53,7 +53,7 @@ knowing a vendor's name? do they read zones as containers? do they find and use 
 
 ### v1 (M1) — the editor
 - **3D canvas** (isometric) with pan, zoom, fit, minimap. Blocks snap to grid cells; arrow keys move one cell along a grid
-  axis; **Rotate view** turns the camera in 90° steps (the file does not change); **Flat view** shows the file from above.
+  axis; **Rotate view** turns the camera in 90° steps (the file does not change). The flat view (the file from above) comes in M2.
 - Blocks drawn back to front; outer edges rounded (5 px); connections along the grid axes with right-angle turns at half
   block height; labels as pills on the longest straight part.
 - **Palette** by category; search reads every pack ("postgres", "rds", "sql" all find Relational database). Drag onto the
@@ -167,6 +167,8 @@ Logos and product names are trademarks of their owners and are used only to name
 ```
 
 - `show` is the pack the diagram opens in; it changes names and icons only.
+- Connections store no route. The editor routes each one along the grid axes, trying an L-shaped and a Z-shaped path
+  and keeping one that crosses no other block; a hand-drawn bend is not part of v1.
 - Zone kinds: `region`, `network`, `zone` (failure zone), `subnet` (with `access`), `group`. Packs name them (AWS: VPC, Availability Zone).
 - Positions are **ground grid cells**, not pixels: a node's `x, y` is the centre of its footprint, a zone's `x, y, w, h` its
   rectangle on the ground (halves allowed). The 3D view projects them (one cell = 34.64 px across, 20 px down at 100%); the
@@ -342,7 +344,7 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 3 | **File stores ground grid cells and roles**, never pixels or product names. | Packs, the flat view, the simulator and checks all rely on it. |
 | 4 | **Stack as in section 10**: React 19 + Vite + Zustand + shadcn editor; one TypeScript engine package; Hono checker service. | Fewest mistakes for AI-assisted building, shadcn is React-first, labsite's portal is React; one engine means marks never disagree with the browser. |
 | 5 | **Name "Archboard" stays the working name.** | Renaming is cheap until a public launch. A trademark search comes before any public launch (still open, below). |
-| 6 | **AWS icon files are fetched at build time, not committed.** | AWS's wording covers making diagrams; redistributing the files in a public repository is a separate question, so the cautious choice. |
+| 6 | **AWS icon files are fetched at build time, not committed.** | AWS's wording covers making diagrams; redistributing the files in a public repository is a separate question, so the cautious choice. The deployed editor does serve them to its users, inside the diagram tool, as other diagram tools do; without them (a fresh clone, CI) the editor shows the generic line icons. |
 | 7 | **Draft text syntax (section 4) approved**, refined while building M2. | Good enough to build against; small changes are cheap before M2 ships. |
 | 8 | **Hosting**: the editor on GitHub Pages; the checker service in Docker next to labsite on the instructor's server, internal only. | Free, already where the repository is; the checker needs no public address. |
 | 9 | **One TypeScript engine** in the browser's Web Worker and in the Node checker; the Python `archboard-check` package is dropped. | A port would drift and students would dispute marks. labsite calls the checker over HTTP. |
@@ -354,6 +356,9 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 15 | **Next pack**: Kubernetes, after its icon terms are read; Google Cloud and Azure later. | Clearest open terms; useful for any stack. |
 | 16 | **No AI first draft** for now. | Needs an API key, a budget and a privacy decision. |
 | 17 | **English only**, with strings kept in one file so translation needs no code change. | Cheapest now, open later. |
+| 18 | **Connections are routed automatically**; the file stores no bends. | Keeps the file clean and the text view simple; hand-drawn bends can be added later as an optional field. |
+| 19 | **Roles and zone kinds have one source**, `packages/engine/src/roles.json`; `tools/fetch_icons.py` reads it, and a test fails if the manifest differs. | One list, so the engine, the packs and the editor cannot disagree. |
+| 20 | **The flat view moves to M2**; M1 is the 3D view only. | M1 is already the largest milestone. |
 
 ### Still open (for the instructor)
 

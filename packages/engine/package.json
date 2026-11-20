@@ -1,0 +1,14 @@
+{
+  "name": "@archboard/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The diagram format, catalog, rules and simulation. Plain TypeScript: no DOM, no framework, no clock.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./roles.json": "./src/roles.json"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}
