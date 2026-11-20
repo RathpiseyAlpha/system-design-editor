@@ -113,6 +113,10 @@ svg.iso text, svg.solo text, svg.zones-demo text { font-family: var(--font-mono)
 .blk .name, .blk .sub { text-anchor: middle; paint-order: stroke; stroke: var(--c); stroke-width: 4px; stroke-linejoin: round; }
 .blk .name { font: var(--t-block); }
 .blk .sub { font: var(--t-block-sub); fill: color-mix(in srgb, var(--ink) 78%, var(--c)); }
+.blk .groove { fill: none; stroke: var(--edge); stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
+.blk .led { fill: var(--ok); stroke: var(--edge); stroke-width: .9; }
+.blk .bay { fill: none; stroke: var(--edge); stroke-width: 3; stroke-linecap: round; opacity: .5; }
+.blk .vent { fill: none; stroke: var(--edge); stroke-width: 1.4; stroke-linecap: round; opacity: .55; }
 .stk { fill: var(--sticker); stroke: var(--sticker-edge); stroke-width: 1.5; }
 .stk-sh { fill: var(--drop); }
 .stk-ring { fill: none; stroke: var(--sticker-edge); stroke-width: 1.5; }
@@ -555,7 +559,7 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
     <div class="panel">
       <h3>Blocks: shapes, with real icons</h3>
       <div class="state-grid" id="blockShapes"></div>
-      <p class="note">Shape is the kind of thing, colour the category, the sticker the product. A box runs code, a cylinder keeps data, a low box stores files, a plate is people or devices outside the system.</p>
+      <p class="note">Shape is the kind of thing, colour the category, the sticker the product. A server is a virtual machine or a group of them, a box runs other code, a cylinder keeps data, a low box stores files, a plate is people or devices outside the system.</p>
     </div>
   </section>
 
@@ -928,7 +932,20 @@ const DIAGRAM = {
 // ---------------- Isometric renderer (ground cells -> screen). This geometry is what M1 ports.
 const IX = 34.64, IY = 20, LIFT = 22, RB = 5, STK = 30;
 const P = (gx, gy) => [(gx - gy) * IX, (gx + gy) * IY];
-const SHAPES = { box: { s: 0.9, h: 56 }, low: { s: 0.95, h: 42 }, plate: { s: 1.2, h: 14 }, cyl: { r: 1.05, h: 46 } };
+const SHAPES = { box: { s: 0.9, h: 56 }, server: { s: 0.9, h: 60 }, low: { s: 0.95, h: 42 }, plate: { s: 1.2, h: 14 }, cyl: { r: 1.05, h: 46 } };
+// A rack server's front on the two visible faces: grooves between three units; per unit a status light and a drive bay
+// (left face) and two vent slots (right face). t runs along a face's bottom edge (0 outer corner, 1 front corner), h is height.
+function serverFront(a, b, cx, cy, H) {
+  const L = (t, h) => [cx - a + t * a, cy + t * b - h], R = (t, h) => [cx + a - t * a, cy + t * b - h];
+  let g = '';
+  for (let k = 1; k < 3; k++) { const h = H * k / 3; g += `<polyline class="groove" points="${pts([L(0, h), L(1, h), R(0, h)])}"/>`; }
+  for (let i = 0; i < 3; i++) {
+    const h = H * (i + 0.5) / 3, [lx, ly] = L(0.12, h);
+    g += `<ellipse class="led" cx="${f(lx)}" cy="${f(ly)}" rx="2.3" ry="2.3"/><polyline class="bay" points="${pts([L(0.2, h), L(0.36, h)])}"/>`;
+    g += `<polyline class="vent" points="${pts([R(0.14, h + 2), R(0.4, h + 2)])}"/><polyline class="vent" points="${pts([R(0.14, h - 2), R(0.4, h - 2)])}"/>`;
+  }
+  return g;
+}
 const f = (n) => Math.round(n * 10) / 10;
 const pts = (a) => a.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1009,6 +1026,7 @@ function blockSVG(n, o = {}) {
     g += `<clipPath id="${id}"><path d="${hullD}"/></clipPath>`;
     g += `<path class="left" d="${hullD}"/>`;
     g += `<g clip-path="url(#${id})"><polygon class="right" points="${pts([T(0, b), T(a + 2, 0), C(a + 2, 0), C(0, b + 2)])}"/><polygon class="top" points="${pts([T(0, -b - 2), T(a + 2, 0), T(0, b), T(-a - 2, 0)])}"/>`;
+    if (r.shape === 'server') g += serverFront(a, b, cx, cy, H);
     if (hf > 0) g += `<polygon class="load ${st}" points="${pts([C(-a - 2, 2), C(0, b + 2), C(0, b - hf), C(-a - 2, -hf)])}"/><polygon class="load ${st}" points="${pts([C(0, b + 2), C(a + 2, 2), C(a + 2, -hf), C(0, b - hf)])}"/>`;
     g += '</g>';
     g += `<path class="ol" d="${hullD}"/><polyline class="ol" points="${pts([T(-a + 1.2, 0), T(0, b), T(a - 1.2, 0)])}"/>`;
@@ -1186,7 +1204,7 @@ const solo = (el, n, o) => { el.setAttribute('viewBox', '-90 -122 180 200'); el.
 document.getElementById('blockStates').innerHTML = states.map(([cap]) => `<figure><svg class="solo" aria-hidden="true"></svg><figcaption>${cap}</figcaption></figure>`).join('');
 document.querySelectorAll('#blockStates svg').forEach((el, i) => solo(el, states[i][1], { pack: 'aws', ...states[i][2] }));
 const shapes = [
-  ['box, AWS: EC2', { role: 'vm', label: 'app-1' }, 'aws'],
+  ['server, AWS: EC2', { role: 'vm', label: 'app-1' }, 'aws'],
   ['cylinder, open source: PostgreSQL', { role: 'relational-db', label: 'orders-db' }, 'oss'],
   ['low box, AWS: S3', { role: 'object-storage', label: 'media' }, 'aws'],
   ['box, open source: Kafka', { role: 'stream', label: 'events' }, 'oss'],

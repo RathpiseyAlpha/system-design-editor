@@ -72,12 +72,12 @@ window.ICON_CATALOG = {
     "vm": {
       "name": "Virtual machine",
       "category": "compute",
-      "shape": "box"
+      "shape": "server"
     },
     "autoscaling": {
       "name": "Autoscaling group",
       "category": "compute",
-      "shape": "box"
+      "shape": "server"
     },
     "containers": {
       "name": "Containers",

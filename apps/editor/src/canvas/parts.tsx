@@ -51,6 +51,33 @@ export function Sticker({ x, y, s }: { x: number; y: number; s: Shown }) {
   );
 }
 
+/**
+ * The front of a rack server, drawn on the two visible faces of a box: grooves between three rack units, and in each unit
+ * a status light and a drive bay on the left face and a vent slot on the right face. A point on a face is found by how far
+ * along its bottom edge it is (t, 0 at the outer corner, 1 at the front corner) and how high above the ground (h).
+ */
+function ServerFront({ a, b, cx, cy, H }: { a: number; b: number; cx: number; cy: number; H: number }) {
+  const UNITS = 3;
+  const onLeft = (t: number, h: number): Pt => [cx - a + t * a, cy + t * b - h];
+  const onRight = (t: number, h: number): Pt => [cx + a - t * a, cy + t * b - h];
+  const out: ReactNode[] = [];
+  for (let k = 1; k < UNITS; k++) {
+    const h = (H * k) / UNITS;
+    out.push(<polyline key={`g${k}`} className="groove" points={pts([onLeft(0, h), onLeft(1, h), onRight(0, h)])} />);
+  }
+  for (let i = 0; i < UNITS; i++) {
+    const h = (H * (i + 0.5)) / UNITS;
+    const [lx, ly] = onLeft(0.12, h);
+    out.push(
+      <ellipse key={`l${i}`} className="led" cx={f(lx)} cy={f(ly)} rx={2.3} ry={2.3} />,
+      <polyline key={`d${i}`} className="bay" points={pts([onLeft(0.2, h), onLeft(0.36, h)])} />,
+      <polyline key={`v${i}`} className="vent" points={pts([onRight(0.14, h + 2), onRight(0.4, h + 2)])} />,
+      <polyline key={`w${i}`} className="vent" points={pts([onRight(0.14, h - 2), onRight(0.4, h - 2)])} />,
+    );
+  }
+  return <>{out}</>;
+}
+
 interface BlockProps {
   node: DNode;
   pack: PackId;
@@ -92,6 +119,7 @@ export const Block = memo(function Block({ node: n, pack, selected, onPointerDow
       <g key="faces" clipPath={`url(#${clipId})`}>
         <polygon className="right" points={pts([T(0, b), T(a + 2, 0), C(a + 2, 0), C(0, b + 2)])} />
         <polygon className="top" points={pts([T(0, -b - 2), T(a + 2, 0), T(0, b), T(-a - 2, 0)])} />
+        {r.shape === 'server' && <ServerFront a={a} b={b} cx={cx} cy={cy} H={H} />}
       </g>,
       <path key="ol" className="ol" d={hull} />,
       <polyline key="edge" className="ol" points={pts([T(-a + 1.2, 0), T(0, b), T(a - 1.2, 0)])} />,

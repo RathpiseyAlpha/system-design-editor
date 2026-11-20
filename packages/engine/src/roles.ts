@@ -3,7 +3,7 @@
 import core from './roles.json' with { type: 'json' };
 
 export type Category = 'client' | 'network' | 'compute' | 'storage' | 'database' | 'messaging' | 'observe' | 'security';
-export type Shape = 'box' | 'low' | 'plate' | 'cyl';
+export type Shape = 'box' | 'server' | 'low' | 'plate' | 'cyl';
 export type ZoneKind = 'region' | 'network' | 'zone' | 'subnet' | 'group';
 
 export interface RoleInfo {

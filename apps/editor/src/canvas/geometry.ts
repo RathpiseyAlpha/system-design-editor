@@ -23,6 +23,7 @@ export interface BoxShape { s: number; h: number }
 export interface CylShape { r: number; h: number }
 export const SHAPES: Record<Shape, BoxShape | CylShape> = {
   box: { s: 0.9, h: 56 },
+  server: { s: 0.9, h: 60 }, // a rack server: three units with grooves, a status light, a drive bay and vents
   low: { s: 0.95, h: 42 },
   plate: { s: 1.2, h: 14 },
   cyl: { r: 1.05, h: 46 },

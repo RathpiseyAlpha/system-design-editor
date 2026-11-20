@@ -41,8 +41,8 @@ knowing a vendor's name? do they read zones as containers? do they find and use 
    pack never moves or loses anything. A role with no product in a pack shows its generic name and line icon.
 2. **Role first, product second.** A block reads as its name, then its product (`orders-db` over `RDS` or `PostgreSQL`).
    Checks read roles, so any product is a correct answer.
-3. **3D that explains.** Shape is the kind (box runs code, cylinder keeps data, low box stores files, plate is people or
-   devices outside the system); colour is the category; the sticker on top is the product. A flat view is one click away.
+3. **3D that explains.** Shape is the kind (a rack server is a virtual machine or an autoscaling group of them, a box runs
+   other code, a cylinder keeps data, a low box stores files, a plate is people or devices outside the system); colour is the category; the sticker on top is the product. A flat view is one click away.
 4. **Real icons, shown as they are.** Official AWS icons and project logos sit upright on a light sticker, never redrawn,
    recoloured or skewed. AWS icons fill their sticker and take its rounded corners (instructor's decision, section 12).
 5. **Never stuck.** No blocking dialogs; everything can be undone; the diagram autosaves.
