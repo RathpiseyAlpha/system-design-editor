@@ -1,8 +1,8 @@
 // The editor's state. The diagram store holds the file and its history; components subscribe to the smallest slice they need.
 import { create } from 'zustand';
-import { fromTemplate, parseDiagramText, serializeDiagram, type Diagram, type DNode } from '@archboard/engine';
+import { fromTemplate, parseDiagramText, serializeDiagram, type Diagram, type DEdge, type DNode, type DZone, type ZoneKind } from '@archboard/engine';
 import { isPack, type PackId } from '../catalog/packs.ts';
-import { addNode, deleteNodes, moveNode, updateNode } from './ops.ts';
+import { addEdge, addNode, addZone, deleteEdge, deleteNodes, deleteZone, moveNode, moveZone, resizeZone, updateEdge, updateNode, updateZone } from './ops.ts';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type SaveState = 'saved' | 'blocked';
@@ -23,8 +23,10 @@ interface EditorState {
   docKey: number;
   pack: PackId;
   selected: string | null;
-  /** A block being dragged: drawn at this position until the drop is committed. Not part of the history. */
-  drag: { id: string; x: number; y: number } | null;
+  /** Something being dragged, drawn at its new place until the drop is committed. Not part of the history. */
+  drag: Drag | null;
+  /** "Connect to": the block a new connection starts from, waiting for the user to pick the other end. */
+  connectFrom: string | null;
   theme: Theme;
   save: SaveState;
   notice: Notice | null;
@@ -41,14 +43,28 @@ interface EditorState {
   select: (id: string | null) => void;
   setTheme: (t: Theme) => void;
   setNotice: (n: Notice | null) => void;
-  setDrag: (d: EditorState['drag']) => void;
+  setDrag: (d: Drag | null) => void;
+  setConnectFrom: (id: string | null) => void;
 
   add: (role: string, at?: [number, number]) => void;
   move: (id: string, x: number, y: number) => void;
   update: (id: string, patch: Partial<Omit<DNode, 'id'>>, key?: string) => void;
+  /** Delete blocks, zones or connections by id (a block takes its connections with it). */
   remove: (ids: string[]) => void;
   setTitle: (title: string) => void;
+
+  addZone: (kind: ZoneKind, access?: 'public' | 'private', at?: [number, number]) => void;
+  moveZone: (id: string, dx: number, dy: number) => void;
+  resizeZone: (id: string, w: number, h: number) => void;
+  updateZone: (id: string, patch: Partial<Pick<DZone, 'label' | 'kind' | 'access'>>, key?: string) => void;
+  connect: (from: string, to: string) => void;
+  updateEdge: (id: string, patch: Partial<Pick<DEdge, 'kind' | 'label'>>, key?: string) => void;
 }
+
+export type Drag =
+  | { kind: 'node'; id: string; x: number; y: number }
+  | { kind: 'zone'; id: string; dx: number; dy: number }
+  | { kind: 'resize'; id: string; w: number; h: number };
 
 function readTheme(): Theme {
   try {
@@ -84,6 +100,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   pack: isPack(start.show) ? start.show : 'generic',
   selected: null,
   drag: null,
+  connectFrom: null,
   theme: readTheme(),
   save: 'saved',
   notice: null,
@@ -113,7 +130,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
       return { diagram: next, past: [...s.past, s.diagram], future: s.future.slice(1), lastEdit: null, selected: keep(next, s.selected) };
     }),
   // Loading keeps the previous diagram in the history, so New and Open never lose work: Undo brings it back.
-  load: (d) => set((s) => ({ diagram: d, past: [...s.past, s.diagram].slice(-HISTORY), future: [], lastEdit: null, docKey: s.docKey + 1, selected: null, drag: null, pack: isPack(d.show) ? d.show : 'generic' })),
+  load: (d) => set((s) => ({ diagram: d, past: [...s.past, s.diagram].slice(-HISTORY), future: [], lastEdit: null, docKey: s.docKey + 1, selected: null, drag: null, connectFrom: null, pack: isPack(d.show) ? d.show : 'generic' })),
   openText: (text, fileName) => {
     const r = parseDiagramText(text);
     if (r.ok) {
@@ -142,6 +159,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   },
   setNotice: (notice) => set({ notice }),
   setDrag: (drag) => set({ drag }),
+  setConnectFrom: (connectFrom) => set({ connectFrom }),
 
   add: (role, at) => {
     const [x, y] = at ?? get().viewCenter();
@@ -153,14 +171,38 @@ export const useEditor = create<EditorState>()((set, get) => ({
   update: (id, patch, key) => get().commit(updateNode(get().diagram, id, patch), key),
   remove: (ids) => {
     if (!ids.length) return;
-    get().commit(deleteNodes(get().diagram, ids));
+    let d = get().diagram;
+    const nodes = ids.filter((id) => d.nodes.some((n) => n.id === id));
+    if (nodes.length) d = deleteNodes(d, nodes);
+    for (const id of ids) {
+      if (d.zones.some((z) => z.id === id)) d = deleteZone(d, id);
+      else if (d.edges.some((e) => e.id === id)) d = deleteEdge(d, id);
+    }
+    get().commit(d);
     set({ selected: null });
   },
   setTitle: (title) => get().commit({ ...get().diagram, title }, 'title'),
+
+  addZone: (kind, access, at) => {
+    const [x, y] = at ?? get().viewCenter();
+    const { diagram, id } = addZone(get().diagram, kind, x, y, access);
+    get().commit(diagram);
+    set({ selected: id });
+  },
+  moveZone: (id, dx, dy) => get().commit(moveZone(get().diagram, id, dx, dy)),
+  resizeZone: (id, w, h) => get().commit(resizeZone(get().diagram, id, w, h)),
+  updateZone: (id, patch, key) => get().commit(updateZone(get().diagram, id, patch), key),
+  connect: (from, to) => {
+    const { diagram, id } = addEdge(get().diagram, from, to);
+    if (id === null) return;
+    if (diagram !== get().diagram) get().commit(diagram);
+    set({ selected: id, connectFrom: null });
+  },
+  updateEdge: (id, patch, key) => get().commit(updateEdge(get().diagram, id, patch), key),
 }));
 
 function keep(d: Diagram, id: string | null): string | null {
-  return id && d.nodes.some((n) => n.id === id) ? id : null;
+  return id && [...d.nodes, ...d.zones, ...d.edges].some((x) => x.id === id) ? id : null;
 }
 
 // Autosave in this browser, half a second after the last change. Storage can be blocked: then the status says so.

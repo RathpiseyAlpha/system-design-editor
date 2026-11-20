@@ -51,10 +51,11 @@ function useShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const s = useEditor.getState();
       const mod = e.ctrlKey || e.metaKey;
+      if (e.key === 'Escape' && s.connectFrom) { s.setConnectFrom(null); return; }
       if (mod && e.key.toLowerCase() === 'z' && !typing(e.target)) { e.preventDefault(); if (e.shiftKey) s.redo(); else s.undo(); return; }
       if (mod && e.key.toLowerCase() === 'y' && !typing(e.target)) { e.preventDefault(); s.redo(); return; }
       if (typing(e.target) || mod || e.altKey) return;
-      if (e.key === 'Escape') s.select(null);
+      if (e.key === 'Escape') { if (s.connectFrom) s.setConnectFrom(null); else s.select(null); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selected) { e.preventDefault(); s.remove([s.selected]); }
       else if (e.key.toLowerCase() === 'a') { e.preventDefault(); findService(); }
     };

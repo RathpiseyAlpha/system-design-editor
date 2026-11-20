@@ -153,20 +153,20 @@ export const Block = memo(function Block({ node: n, pack, selected, onPointerDow
           <text className="sub" x={f(cx)} y={f(labelY + 14)}>{clip(sv.short, 14)}</text>
         </>
       )}
-      {selected && ports.map(([x, y], i) => <rect key={i} className="port" x={f(x - 4.5)} y={f(y - 4.5)} width={9} height={9} rx={2} />)}
+      {selected && ports.map(([x, y], i) => <rect key={i} className="port" data-port={n.id} x={f(x - 6)} y={f(y - 6)} width={12} height={12} rx={2.5}><title>Drag to another block to connect</title></rect>)}
     </g>
   );
 });
 
 /** A zone: networks and regions are raised plates; subnets, failure zones and groups are dashed areas on the ground. */
-export function ZoneShape({ z }: { z: DZone }) {
+export function ZoneShape({ z, selected }: { z: DZone; selected?: boolean }) {
   const c: Pt[] = [P(z.x, z.y), P(z.x + z.w, z.y), P(z.x + z.w, z.y + z.h), P(z.x, z.y + z.h)];
   const plate = z.kind === 'network' || z.kind === 'region';
   const v = z.kind === 'network' ? '--zone-vpc' : z.kind === 'region' || z.kind === 'zone' ? '--zone-region' : z.access === 'public' ? '--zone-public' : '--zone-private';
   const style = cssVar('--z', `var(${v})`);
   if (!plate) {
     return (
-      <g className="zone" style={style} data-zone={z.id}>
+      <g className={`zone${selected ? ' selected' : ''}`} style={style} data-zone={z.id}>
         <polygon className="z-top" points={pts(c)} />
         <polygon className="z-ol dash" points={pts(c)} />
       </g>
@@ -174,7 +174,7 @@ export function ZoneShape({ z }: { z: DZone }) {
   }
   const t = 10, d = (p: Pt): Pt => [p[0], p[1] + t];
   return (
-    <g className="zone" style={style} data-zone={z.id}>
+    <g className={`zone${selected ? ' selected' : ''}`} style={style} data-zone={z.id}>
       <polygon className="z-side" points={pts([c[3]!, c[2]!, d(c[2]!), d(c[3]!)])} />
       <polygon className="z-side z-side-r" points={pts([c[2]!, c[1]!, d(c[1]!), d(c[2]!)])} />
       <polygon className="z-top" points={pts(c)} />
@@ -185,13 +185,39 @@ export function ZoneShape({ z }: { z: DZone }) {
 }
 
 /** The zone's name tab: plates on their back edge, other zones on their front-left edge. */
-export function ZoneTab({ z, pack }: { z: DZone; pack: PackId }) {
+/**
+ * The zone's name tab, which is also its handle: drag it to move the zone with everything inside. Networks and regions label
+ * their left corner (below the plate); other zones their right corner, where blocks rarely stand.
+ */
+export function ZoneTab({ z, pack, onPointerDown }: { z: DZone; pack: PackId; onPointerDown?: (e: PointerEvent<SVGGElement>, id: string) => void }) {
   const plate = z.kind === 'network' || z.kind === 'region';
-  const [mx, my] = plate ? P(z.x + Math.min(z.w * 0.3, 3), z.y) : P(z.x, z.y + Math.min(z.h * 0.5, 3.2));
+  const [mx, my] = plate ? P(z.x, z.y + z.h) : P(z.x + z.w, z.y);
   const { kind, icon } = zoneLabel(z.kind, z.access, pack);
-  return <Pill x={mx + (plate ? 34 : -8)} y={my - 16} text={z.label} sub={kind} icon={icon} />;
+  return (
+    <g className="tab-handle" data-zone-tab={z.id} onPointerDown={onPointerDown ? (e) => onPointerDown(e, z.id) : undefined}>
+      <title>Drag to move {z.label} and everything inside it</title>
+      <Pill x={mx + (plate ? 40 : -6)} y={my + (plate ? 44 : -16)} text={z.label} sub={kind} icon={icon} />
+    </g>
+  );
 }
 
-export function Wire({ points, kind }: { points: Pt[]; kind: EdgeKind }) {
-  return <polyline className="wire" data-kind={kind} points={pts(points)} markerEnd="url(#head)" />;
+/** The resize handle at a selected zone's far corner. */
+export function ZoneResize({ z, onPointerDown }: { z: DZone; onPointerDown: (e: PointerEvent<SVGGElement>, id: string) => void }) {
+  const [x, y] = P(z.x + z.w, z.y + z.h);
+  return (
+    <g className="resize-handle" data-handle={z.id} onPointerDown={(e) => onPointerDown(e, z.id)}>
+      <title>Drag to resize {z.label}</title>
+      <polygon points={pts([[x, y - 9], [x + 15, y], [x, y + 9], [x - 15, y]])} />
+    </g>
+  );
+}
+
+/** A connection, with a wide invisible stroke on top so it is easy to click. */
+export function Wire({ id, points, kind, selected }: { id: string; points: Pt[]; kind: EdgeKind; selected: boolean }) {
+  return (
+    <g className={`edge${selected ? ' selected' : ''}`} data-edge={id}>
+      <polyline className="wire" data-kind={kind} points={pts(points)} markerEnd="url(#head)" />
+      <polyline className="wire-hit" points={pts(points)} />
+    </g>
+  );
 }

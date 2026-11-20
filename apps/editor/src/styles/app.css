@@ -207,3 +207,29 @@ button.pal-item:active { cursor: grabbing; }
 .side--l.open .cat-title span { display: inline; }
 .side--l.open .pal-item { grid-template-columns: 32px 1fr; justify-content: stretch; padding: 4px 8px; }
 .side--l.open .empty { display: block; }
+
+/* ---------------- slice 4: zones and connections */
+.zone.selected .z-ol { stroke: var(--marker-strong); stroke-width: 3.5; }
+.tab-handle { cursor: move; }
+.tab-handle .pill { pointer-events: all; }
+.tab-handle:hover .pill rect.face { stroke-width: 2.25; }
+.resize-handle { cursor: nwse-resize; }
+.resize-handle polygon { fill: var(--marker); stroke: var(--edge); stroke-width: 2; }
+.edge .wire-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.edge.selected .wire { stroke: var(--marker-strong); stroke-width: 3.5; }
+.port { cursor: crosshair; }
+.port:hover { fill: var(--marker); }
+.rubber { stroke: var(--marker-strong); stroke-width: 3; stroke-dasharray: 6 5; pointer-events: none; }
+.canvas.connecting svg.iso, .canvas.connecting .blk { cursor: crosshair; }
+.hintbar { position: absolute; top: 12px; left: 50%; translate: -50% 0; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: var(--marker-soft); border: var(--bw) solid var(--marker-strong); border-radius: var(--r-control); box-shadow: 2px 2px 0 var(--marker-strong);
+  font: 400 13px/18px var(--font-prose); color: var(--ink); }
+.hintbar svg { width: 15px; height: 15px; color: var(--marker-strong); }
+.hintbar b { font-family: var(--font-mono); }
+.zone-ico svg { color: var(--ink); }
+.linklike { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-align: left; }
+.linklike:hover { text-decoration: underline; }
+.row-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.field > .btn { justify-self: start; }
+.field small.muted { font: var(--t-hint); }
+.btn[aria-pressed="true"] { background: var(--marker); border-color: var(--edge); }
