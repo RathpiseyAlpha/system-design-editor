@@ -7,7 +7,7 @@ import type { Diagram, DZone, ZoneKind } from '@archboard/engine';
 import { useEditor, type Drag } from '../state/store.ts';
 import { moveZone, resizeZone } from '../state/ops.ts';
 import { Block, Pill, Wire, ZoneResize, ZoneShape, ZoneTab, zoneTabWidth } from './parts.tsx';
-import { P, LIFT, bounds, paintOrder, route, snap, toGround, f, rot, unrot, rotRect, unrotRect, rotateDiagram, placeLabels, blockBox, tabCandidates, edgeLabelCandidates, pillWidth, type Pt, type Turn } from './geometry.ts';
+import { projectionOf, clearFlatLabels, bounds, paintOrder, route, snap, f, rot, unrot, rotRect, unrotRect, rotateDiagram, placeLabels, blockBox, tabCandidates, edgeLabelCandidates, pillWidth, type Pt, type Turn } from './geometry.ts';
 import { Icon } from '../ui/Icon.tsx';
 import { runLayout } from '../layout/runLayout.ts';
 
@@ -17,7 +17,8 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 const ARROWS: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
 const NO_PAN = '[data-block], [data-zone-tab], [data-handle]';
 
-function Grid() {
+const Grid = memo(function Grid({ flat }: { flat: boolean }) {
+  const { P } = projectionOf(flat);
   const lines: Pt[][] = [];
   for (let k = -30; k <= 60; k++) lines.push([P(k, -30), P(k, 60)], [P(-30, k), P(60, k)]);
   return (
@@ -25,7 +26,7 @@ function Grid() {
       {lines.map(([a, b], i) => <line key={i} className="gridline" x1={f(a![0])} y1={f(a![1])} x2={f(b![0])} y2={f(b![1])} />)}
     </g>
   );
-}
+});
 
 /** Zones ordered so that a parent is painted before what is inside it. */
 function zoneDepthOrder(zones: DZone[]): DZone[] {
@@ -58,6 +59,8 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
   const selected = useEditor((s) => s.selected);
   const drag = useEditor((s) => s.drag);
   const turn = useEditor((s) => s.turn);
+  const flat = useEditor((s) => s.flat);
+  const proj = projectionOf(flat);
   // The scene draws the file as the turned view sees it (Rotate view); handlers turn edits back into file coordinates.
   const d = useMemo(() => rotateDiagram(withDrag(doc, drag), turn), [doc, drag, turn]);
   const byId = useMemo(() => new Map(d.nodes.map((n) => [n.id, n])), [d.nodes]);
@@ -66,10 +69,10 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
       d.edges.flatMap((e) => {
         const a = byId.get(e.from), b = byId.get(e.to);
         if (!a || !b) return [];
-        const screen = route(a, b, d.nodes).map(([gx, gy]): Pt => { const [x, y] = P(gx, gy); return [x, y - LIFT]; });
-        return [{ e, screen }];
+        const screen = route(a, b, d.nodes).map(([gx, gy]): Pt => { const [x, y] = proj.P(gx, gy); return [x, y - proj.lift]; });
+        return [{ e, screen: proj.flat ? clearFlatLabels(screen) : screen }];
       }),
-    [d.edges, d.nodes, byId],
+    [d.edges, d.nodes, byId, proj],
   );
   const zones = useMemo(() => zoneDepthOrder(d.zones), [d.zones]);
   const nodes = useMemo(() => [...d.nodes].sort(paintOrder), [d.nodes]);
@@ -78,25 +81,25 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
     () =>
       placeLabels(
         [
-          ...zones.map((z) => ({ id: z.id, width: zoneTabWidth(z, pack), at: tabCandidates(z) })),
+          ...zones.map((z) => { const width = zoneTabWidth(z, pack); return { id: z.id, width, at: tabCandidates(z, proj, width) }; }),
           ...wires.filter((w) => w.e.label).map((w) => ({ id: w.e.id, width: pillWidth(w.e.label!), at: edgeLabelCandidates(w.screen) })),
         ],
-        d.nodes.map(blockBox),
+        d.nodes.map((n) => blockBox(n, proj)),
       ),
-    [zones, wires, d.nodes, pack],
+    [zones, wires, d.nodes, pack, proj],
   );
   const selZone = d.zones.find((z) => z.id === selected);
 
   return (
     <>
-      {zones.map((z) => <ZoneShape key={z.id} z={z} selected={z.id === selected} />)}
+      {zones.map((z) => <ZoneShape key={z.id} z={z} selected={z.id === selected} flat={flat} />)}
       {wires.map(({ e, screen }) => <Wire key={e.id} id={e.id} points={screen} kind={e.kind} selected={e.id === selected} />)}
       {nodes.map((n) => (
-        <Block key={n.id} node={n} pack={pack} selected={selected === n.id} onPointerDown={h.onBlockPointerDown} onKeyDown={h.onBlockKeyDown} />
+        <Block key={n.id} node={n} pack={pack} selected={selected === n.id} flat={flat} onPointerDown={h.onBlockPointerDown} onKeyDown={h.onBlockKeyDown} />
       ))}
       {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} at={labelAt.get(z.id)!} onPointerDown={h.onZonePointerDown} />)}
       {wires.filter((w) => w.e.label).map(({ e }) => { const at = labelAt.get(e.id)!; return <Pill key={e.id} x={at[0]} y={at[1]} text={e.label!} />; })}
-      {selZone && <ZoneResize z={selZone} onPointerDown={h.onResizePointerDown} />}
+      {selZone && <ZoneResize z={selZone} flat={flat} onPointerDown={h.onResizePointerDown} />}
     </>
   );
 });
@@ -113,6 +116,7 @@ function trackPointer(
   done: (t: [number, number]) => void,
 ) {
   const x0 = e.clientX, y0 = e.clientY;
+  const { toGround } = projectionOf(useEditor.getState().flat);
   let last = at(0, 0);
   const start = last;
   const onMove = (ev: globalThis.PointerEvent) => {
@@ -134,6 +138,7 @@ export function Canvas() {
   const diagram = useEditor((s) => s.diagram);
   const docKey = useEditor((s) => s.docKey);
   const connectFrom = useEditor((s) => s.connectFrom);
+  const flat = useEditor((s) => s.flat);
   const svgRef = useRef<SVGSVGElement>(null);
   const layerRef = useRef<SVGGElement>(null);
   const zoomLabel = useRef<HTMLSpanElement>(null);
@@ -176,7 +181,7 @@ export function Canvas() {
     useEditor.setState({
       viewCenter: () => {
         const [sx, sy] = zoomTransform(svg).invert([svg.clientWidth / 2, svg.clientHeight / 2]);
-        const [gx, gy] = toGround(sx, sy);
+        const [gx, gy] = projectionOf(useEditor.getState().flat).toGround(sx, sy);
         return unrot(snap(gx), snap(gy), useEditor.getState().turn);
       },
     });
@@ -189,7 +194,7 @@ export function Canvas() {
     return zoomTransform(svg).invert([clientX - rect.left, clientY - rect.top]) as Pt;
   };
   const groundAt = (clientX: number, clientY: number): [number, number] => {
-    const [gx, gy] = toGround(...layerAt(clientX, clientY));
+    const [gx, gy] = projectionOf(useEditor.getState().flat).toGround(...layerAt(clientX, clientY));
     return unrot(snap(gx), snap(gy), useEditor.getState().turn);
   };
   const k = () => zoomTransform(svgRef.current!).k;
@@ -304,7 +309,8 @@ export function Canvas() {
   const fit = useCallback(() => {
     const svg = svgRef.current, z = zoomRef.current;
     if (!svg || !z) return;
-    const b = bounds(rotateDiagram(diagramRef.current, useEditor.getState().turn as Turn)), W = svg.clientWidth, H = svg.clientHeight, pad = 48;
+    const st = useEditor.getState();
+    const b = bounds(rotateDiagram(diagramRef.current, st.turn as Turn), projectionOf(st.flat)), W = svg.clientWidth, H = svg.clientHeight, pad = 48;
     const s = Math.max(ZOOM_MIN, Math.min(1, (W - 2 * pad) / b.w, (H - 2 * pad) / b.h));
     select(svg).call(z.transform, zoomIdentity.translate((W - b.w * s) / 2 - b.x0 * s, (H - b.h * s) / 2 - b.y0 * s).scale(s));
   }, []);
@@ -350,11 +356,11 @@ export function Canvas() {
         ref={svgRef}
         className="iso"
         role="application"
-        aria-label={`${diagram.title}: ${diagram.nodes.length} blocks in 3D. Tab moves between blocks.`}
+        aria-label={`${diagram.title}: ${diagram.nodes.length} blocks${flat ? ', seen from above' : ' in 3D'}. Tab moves between blocks.`}
         onClick={onClick}
       >
         <g ref={layerRef}>
-          <Grid />
+          <Grid flat={flat} />
           <g className="scene"><Scene d={diagram} h={handlers} /></g>
           {rubber && <line className="rubber" x1={f(rubber.a[0])} y1={f(rubber.a[1])} x2={f(rubber.b[0])} y2={f(rubber.b[1])} markerEnd="url(#head)" />}
         </g>
@@ -366,6 +372,10 @@ export function Canvas() {
         </div>
       )}
       <div className="canvas-tools">
+        <div className="seg proj-seg" role="group" aria-label="Look">
+          <button type="button" aria-pressed={!flat} aria-label="3D view" title="Blocks in 3D" onClick={() => useEditor.getState().setFlat(false)}><Icon name="cube" /><span className="lbl">3D</span></button>
+          <button type="button" aria-pressed={flat} aria-label="Flat view" title="Seen from above, like a plan" onClick={() => useEditor.getState().setFlat(true)}><Icon name="flat" /><span className="lbl">Flat</span></button>
+        </div>
         <button className="btn btn--sm" type="button" title="Arrange the whole diagram left to right" aria-label="Auto-layout" disabled={laying} onClick={layOut}>
           <Icon name="layout" /><span className="lbl">{laying ? 'Laying out…' : 'Auto-layout'}</span>
         </button>

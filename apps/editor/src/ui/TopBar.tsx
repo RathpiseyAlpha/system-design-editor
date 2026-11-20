@@ -20,7 +20,7 @@ function Mark() {
 }
 
 const VIEWS: { id: 'canvas' | 'split' | 'code'; name: string; title: string; icon: 'cube' | 'split' | 'code' }[] = [
-  { id: 'canvas', name: '3D', title: 'The 3D canvas', icon: 'cube' },
+  { id: 'canvas', name: 'Canvas', title: 'The canvas alone', icon: 'cube' },
   { id: 'split', name: 'Split', title: 'Text and canvas side by side', icon: 'split' },
   { id: 'code', name: 'Code', title: 'The diagram as text', icon: 'code' },
 ];

@@ -201,6 +201,24 @@ try:
         key(p, "r", "KeyR", text="r")
     time.sleep(0.3)
 
+    # 12b. Flat view: the same file seen from above; a drag lands under the pointer; back to 3D changes nothing in the file.
+    before = json.dumps(saved(p), sort_keys=True)
+    p.js("document.querySelector('button[aria-label=\"Flat view\"]').click();")
+    time.sleep(0.6)
+    flat_cards = p.js("return document.querySelectorAll('.blk.flat').length;")
+    check("Flat view draws every block from above, without changing the file", flat_cards == len(saved(p)["nodes"]) and json.dumps(saved(p), sort_keys=True) == before, f"{flat_cards} cards")
+    n7 = node(saved(p), "n7")
+    kk = p.js(r"return Number(/scale\(([0-9.]+)/.exec(document.querySelector('svg.iso > g').getAttribute('transform'))[1]);")
+    x, y = center(p, '[data-block="n7"] .left')
+    drag_px(x, y, 3 * 44 * kk, -1 * 44 * kk)
+    n7b = node(saved(p), "n7")
+    moved = (round(n7b["x"] - n7["x"], 3), round(n7b["y"] - n7["y"], 3))
+    check("a drag in the flat view moves the block by the cells under the pointer", abs(moved[0] - 3) <= 0.5 and abs(moved[1] + 1) <= 0.5, f"moved {moved}")
+    key(p, "z", "KeyZ", mods=2)
+    p.js("document.querySelector('button[aria-label=\"3D view\"]').click();")
+    time.sleep(0.5)
+    check("back in 3D, Undo has put the block back", json.dumps(saved(p), sort_keys=True) == before and p.js("return document.querySelectorAll('.blk.flat').length;") == 0)
+
     # 13. Export a PNG: the download is a real PNG file.
     import os, tempfile
     dl = tempfile.mkdtemp()
@@ -269,7 +287,7 @@ try:
     p.js("document.querySelector('button[aria-label=\"Code\"]').click();")
     time.sleep(0.4)
     check("Code view shows the text alone", p.js("return !!document.querySelector('.cm-content') && !document.querySelector('svg.iso');"))
-    p.js("document.querySelector('button[aria-label=\"3D\"]').click();")
+    p.js("document.querySelector('button[aria-label=\"Canvas\"]').click();")
     time.sleep(0.6)
 
     # 16. Auto-layout (ELK in a worker): positions change, memberships do not, and Undo puts everything back.

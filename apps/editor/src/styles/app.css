@@ -116,6 +116,12 @@ svg.iso text { font-family: var(--font-mono); fill: var(--ink); }
 .blk.server .groove { stroke: var(--server-ink); opacity: .45; }
 .blk.server .bay, .blk.server .vent { stroke: var(--server-ink); opacity: .55; }
 .blk.server .led { fill: var(--ok); stroke: var(--server-ink); stroke-width: .8; }
+/* The flat view: cards with a hard shadow; the name sits under the card on the paper, so its halo is the paper's colour */
+.blk.flat .f-shadow { fill: var(--drop); }
+.blk.flat .name, .blk.flat .sub { stroke: var(--paper); stroke-width: 5px; }
+.blk.flat.server .name { fill: var(--ink); }
+.blk.flat.server .sub { fill: color-mix(in srgb, var(--ink) 78%, var(--paper)); }
+.zone.flat .z-side { fill: var(--drop); }
 .stk { fill: var(--sticker); stroke: var(--sticker-edge); stroke-width: 1.5; }
 .stk-sh { fill: var(--drop); }
 .stk-ring { fill: none; stroke: var(--sticker-edge); stroke-width: 1.5; }
@@ -214,7 +220,7 @@ button.pal-item:active { cursor: grabbing; }
 .tab-handle .pill { pointer-events: all; }
 .tab-handle:hover .pill rect.face { stroke-width: 2.25; }
 .resize-handle { cursor: nwse-resize; }
-.resize-handle polygon { fill: var(--marker); stroke: var(--edge); stroke-width: 2; }
+.resize-handle polygon, .resize-handle rect { fill: var(--marker); stroke: var(--edge); stroke-width: 2; }
 .edge .wire-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
 .edge.selected .wire { stroke: var(--marker-strong); stroke-width: 3.5; }
 .port { cursor: crosshair; }

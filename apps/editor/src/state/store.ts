@@ -29,6 +29,8 @@ interface EditorState {
   connectFrom: string | null;
   /** Quarter turns of the view (Rotate view). The file never changes when the view turns. */
   turn: 0 | 1 | 2 | 3;
+  /** How the canvas looks at the ground: the 3D isometric view, or flat from above. View only, like turn. */
+  flat: boolean;
   /** What the main area shows: the canvas, the canvas beside the text (Split), or the text alone (Code). */
   layout: 'canvas' | 'split' | 'code';
   theme: Theme;
@@ -50,6 +52,7 @@ interface EditorState {
   setDrag: (d: Drag | null) => void;
   setConnectFrom: (id: string | null) => void;
   rotate: () => void;
+  setFlat: (flat: boolean) => void;
   setLayout: (l: 'canvas' | 'split' | 'code') => void;
   /** Replace positions with an auto-layout: one undo step, and the view fits the result. */
   applyLayout: (d: Diagram) => void;
@@ -110,6 +113,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   drag: null,
   connectFrom: null,
   turn: 0,
+  flat: false,
   layout: 'canvas',
   theme: readTheme(),
   save: 'saved',
@@ -171,6 +175,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   setDrag: (drag) => set({ drag }),
   setConnectFrom: (connectFrom) => set({ connectFrom }),
   rotate: () => set((s) => ({ turn: ((s.turn + 1) % 4) as 0 | 1 | 2 | 3, docKey: s.docKey + 1 })),
+  setFlat: (flat) => set((s) => (s.flat === flat ? {} : { flat, drag: null, docKey: s.docKey + 1 })),
   setLayout: (layout) => set({ layout, connectFrom: null }),
   applyLayout: (d) => {
     get().commit(d);

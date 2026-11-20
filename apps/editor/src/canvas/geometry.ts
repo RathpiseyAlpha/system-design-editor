@@ -16,6 +16,16 @@ export const P = (gx: number, gy: number): Pt => [(gx - gy) * IX, (gx + gy) * IY
 /** Screen point -> ground cell (the inverse of P). */
 export const toGround = (x: number, y: number): Pt => [(x / IX + y / IY) / 2, (y / IY - x / IX) / 2];
 
+/**
+ * How ground cells reach the screen. The 3D view uses the isometric P above; the flat view looks straight down, so a cell is
+ * a FLAT_CELL square and connections run on the ground (no lift). Everything else (the file, routing, snapping) is shared.
+ */
+export interface Projection { flat: boolean; P: (gx: number, gy: number) => Pt; toGround: (x: number, y: number) => Pt; lift: number }
+export const ISO: Projection = { flat: false, P, toGround, lift: LIFT };
+export const FLAT_CELL = 44;
+export const FLAT: Projection = { flat: true, P: (gx, gy) => [gx * FLAT_CELL, gy * FLAT_CELL], toGround: (x, y) => [x / FLAT_CELL, y / FLAT_CELL], lift: 0 };
+export const projectionOf = (flat: boolean): Projection => (flat ? FLAT : ISO);
+
 /** Snap a ground coordinate to the half cell. */
 export const snap = (v: number, step = 0.5): number => Math.round(v / step) * step;
 
@@ -56,6 +66,24 @@ export function rounded(points: Pt[], r: number): string {
 
 /** Width of a pill label (JetBrains Mono 12px semibold: about 7.25 px per character). */
 export const pillWidth = (text: string, sub = '', icon = false): number => (text.length + (sub ? sub.length + 2 : 0)) * 7.25 + 18 + (icon ? 20 : 0);
+
+/** How far a card's name and kind reach below the card in the flat view. */
+export const FLAT_LABEL = 34;
+
+/**
+ * Seen from above, a block's name sits under its card, so a connection that leaves a card downwards, or arrives at it from
+ * below, would run under the name and hide its arrow. Such ends move down past the name (when the part is long enough).
+ */
+export function clearFlatLabels(screen: Pt[]): Pt[] {
+  const out = screen.map((q) => [...q] as Pt);
+  const n = out.length;
+  if (n < 2) return out;
+  const [a, b] = [out[0]!, out[1]!];
+  if (Math.abs(a[0] - b[0]) < 0.5 && b[1] - a[1] > FLAT_LABEL + 24) a[1] += FLAT_LABEL;
+  const [y, z] = [out[n - 2]!, out[n - 1]!];
+  if (Math.abs(y[0] - z[0]) < 0.5 && y[1] - z[1] > FLAT_LABEL + 24) z[1] += FLAT_LABEL;
+  return out;
+}
 
 // ---------------------------------------------------------------- connection routing (SPEC section 6: no bends in the file)
 
@@ -102,18 +130,24 @@ export function route(from: DNode, to: DNode, nodes: DNode[]): Pt[] {
 }
 
 /** Screen-space box around everything in a diagram (blocks with their height and labels, zone plates). */
-export function bounds(d: Diagram): { x0: number; y0: number; w: number; h: number } {
+export function bounds(d: Diagram, proj: Projection = ISO): { x0: number; y0: number; w: number; h: number } {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const add = (x: number, y: number) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
   for (const z of d.zones) for (const [gx, gy] of [[z.x, z.y], [z.x + z.w, z.y], [z.x + z.w, z.y + z.h], [z.x, z.y + z.h]] as Pt[]) {
-    const [x, y] = P(gx, gy);
-    add(x, y - 30);
-    add(x, y + 12);
+    const [x, y] = proj.P(gx, gy);
+    add(x, y - (proj.flat ? 16 : 30));
+    add(x, y + (proj.flat ? 16 : 12));
   }
   for (const n of d.nodes) {
-    const [x, y] = P(n.x, n.y);
-    add(x - 66, y - 120);
-    add(x + 66, y + 66);
+    const [x, y] = proj.P(n.x, n.y);
+    if (proj.flat) {
+      const hs = radiusOf(n.role) * FLAT_CELL;
+      add(x - Math.max(hs, 50), y - hs - 6);
+      add(x + Math.max(hs, 50), y + hs + 40);
+    } else {
+      add(x - 66, y - 120);
+      add(x + 66, y + 66);
+    }
   }
   if (!isFinite(x0)) return { x0: -200, y0: -150, w: 400, h: 300 };
   return { x0, y0, w: x1 - x0, h: y1 - y0 };
@@ -162,7 +196,12 @@ const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 &
 const pillBox = (x: number, y: number, w: number): Box => ({ x0: x - w / 2 - 3, y0: y - 13, x1: x + w / 2 + 3, y1: y + 13 });
 
 /** The screen box a block covers (body, sticker on top, name pill under a plate). */
-export function blockBox(n: DNode): Box {
+export function blockBox(n: DNode, proj: Projection = ISO): Box {
+  if (proj.flat) {
+    // The card, and its name and kind under it.
+    const [cx, cy] = proj.P(n.x, n.y), hs = radiusOf(n.role) * FLAT_CELL;
+    return { x0: cx - Math.max(hs, 46), y0: cy - hs - 4, x1: cx + Math.max(hs, 46), y1: cy + hs + 36 };
+  }
   const shape = roleInfo(n.role).shape, sh = SHAPES[shape];
   const [cx, cy] = P(n.x, n.y);
   const a = isCyl(sh) ? Math.SQRT2 * sh.r * IX : 2 * sh.s * IX, b = isCyl(sh) ? Math.SQRT2 * sh.r * IY : 2 * sh.s * IY;
@@ -188,8 +227,13 @@ export function placeLabels(asks: LabelAsk[], blocks: Box[]): Map<string, Pt> {
 }
 
 /** Where a zone's name tab may go, best first: networks and regions below their left corner, other zones above their right. */
-export function tabCandidates(z: { kind: string; x: number; y: number; w: number; h: number }): Pt[] {
+export function tabCandidates(z: { kind: string; x: number; y: number; w: number; h: number }, proj: Projection = ISO, width = 140): Pt[] {
   const plate = z.kind === 'network' || z.kind === 'region';
+  if (proj.flat) {
+    // Seen from above, the tab sits on the zone's border: top left first, then top right, bottom left, bottom right.
+    const [ax, ay] = proj.P(z.x, z.y), [bx, by] = proj.P(z.x + z.w, z.y + z.h), m = width / 2 + 14;
+    return [[ax + m, ay], [bx - m, ay], [ax + m, by], [bx - m, by]];
+  }
   const L = P(z.x, z.y + z.h), R = P(z.x + z.w, z.y), T = P(z.x, z.y), B = P(z.x + z.w, z.y + z.h);
   const below: Pt[] = [[L[0] + 40, L[1] + 44], [B[0], B[1] + 34], [B[0] - 70, B[1] + 2]];
   const above: Pt[] = [[R[0] - 6, R[1] - 16], [T[0], T[1] - 18], [(T[0] + R[0]) / 2, (T[1] + R[1]) / 2 - 16], [(T[0] + L[0]) / 2, (T[1] + L[1]) / 2 - 16]];

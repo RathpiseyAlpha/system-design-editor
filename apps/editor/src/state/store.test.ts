@@ -85,3 +85,18 @@ describe('zones and spots', () => {
     expect(d.nodes.some((n) => Math.abs(n.x - x) < 1.8 && Math.abs(n.y - y) < 1.8)).toBe(false);
   });
 });
+
+describe('flat view', () => {
+  it('switching to the flat view changes the view, never the file, and refits once', () => {
+    const s = useEditor.getState(), before = s.diagram, key = s.docKey;
+    s.setFlat(true);
+    expect(useEditor.getState().flat).toBe(true);
+    expect(useEditor.getState().diagram).toBe(before);
+    expect(useEditor.getState().past).toHaveLength(s.past.length);
+    expect(useEditor.getState().docKey).toBe(key + 1);
+    useEditor.getState().setFlat(true);
+    expect(useEditor.getState().docKey).toBe(key + 1);
+    useEditor.getState().setFlat(false);
+    expect(useEditor.getState().flat).toBe(false);
+  });
+});

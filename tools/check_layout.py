@@ -50,6 +50,22 @@ for w, h in SIZES:
             check(f"{tag}: no text under 12 px", not m["small"], ", ".join(m["small"][:4]))
             data = p.call("Page.captureScreenshot", format="png")["data"]
             shots.append((tag, base64.b64decode(data)))
+            # The flat view (seen from above): every card inside the canvas, and no card on top of another.
+            p.js("document.querySelector('button[aria-label=\"Flat view\"]').click();")
+            time.sleep(0.6)
+            fl = p.js("""
+              const canvas=document.querySelector('.canvas').getBoundingClientRect();
+              const cards=[...document.querySelectorAll('.blk.flat')].map(b=>(b.querySelector('rect.left, circle.left')||b).getBoundingClientRect());
+              const inside=cards.every(r=>r.left>=canvas.left-1&&r.right<=canvas.right+1&&r.top>=canvas.top-1&&r.bottom<=canvas.bottom+1);
+              let overlap=0; for(let i=0;i<cards.length;i++) for(let j=i+1;j<cards.length;j++){const a=cards[i],b=cards[j]; if(a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1) overlap++;}
+              return {n: cards.length, inside, overlap};
+            """)
+            check(f"{tag} flat: cards drawn from above, all inside the canvas", fl["n"] > 0 and fl["inside"], f"{fl['n']} cards")
+            check(f"{tag} flat: no card covers another", fl["overlap"] == 0, f"{fl['overlap']} overlaps")
+            data = p.call("Page.captureScreenshot", format="png")["data"]
+            shots.append((tag + " flat", base64.b64decode(data)))
+            p.js("document.querySelector('button[aria-label=\"3D view\"]').click();")
+            time.sleep(0.4)
             # The same in Split view: text beside the canvas.
             p.js("document.querySelector('button[aria-label=Split]').click();")
             for _ in range(40):

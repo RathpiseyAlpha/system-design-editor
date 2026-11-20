@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fromTemplate, type DNode } from '@archboard/engine';
-import { P, toGround, snap, route, rounded, bounds, paintOrder, radiusOf } from './geometry.ts';
+import { P, toGround, snap, route, rounded, bounds, paintOrder, radiusOf, FLAT, FLAT_CELL, ISO, projectionOf, tabCandidates, clearFlatLabels, FLAT_LABEL } from './geometry.ts';
 
 const node = (id: string, x: number, y: number, role = 'vm'): DNode => ({ id, role, label: id, x, y });
 
@@ -120,5 +120,58 @@ describe('label placement', () => {
   it('two labels never share a place when there is room', () => {
     const at = placeLabels([{ id: 'a', width: 80, at: [[0, 0]] }, { id: 'b', width: 80, at: [[10, 0], [0, 100]] }], []);
     expect(at.get('b')).toEqual([0, 100]);
+  });
+});
+
+describe('flat view (M2 slice 4)', () => {
+  it('FLAT.toGround inverts FLAT.P, and a cell is a FLAT_CELL square', () => {
+    for (const [gx, gy] of [[0, 0], [3.5, -2], [10.25, 8]] as const) {
+      const [x, y] = FLAT.toGround(...FLAT.P(gx, gy));
+      expect(x).toBeCloseTo(gx, 9);
+      expect(y).toBeCloseTo(gy, 9);
+    }
+    expect(FLAT.P(1, 1)).toEqual([FLAT_CELL, FLAT_CELL]);
+    expect(projectionOf(true)).toBe(FLAT);
+    expect(projectionOf(false)).toBe(ISO);
+  });
+  it('bounds in the flat view hold every card and zone', () => {
+    const d = fromTemplate('three-tier');
+    const b = bounds(d, FLAT);
+    for (const n of d.nodes) {
+      const box = blockBox(n, FLAT);
+      expect(box.x0).toBeGreaterThanOrEqual(b.x0 - 0.01);
+      expect(box.x1).toBeLessThanOrEqual(b.x0 + b.w + 0.01);
+      expect(box.y0).toBeGreaterThanOrEqual(b.y0 - 0.01);
+      expect(box.y1).toBeLessThanOrEqual(b.y0 + b.h + 0.01);
+    }
+    for (const z of d.zones) {
+      const [x1, y1] = FLAT.P(z.x + z.w, z.y + z.h);
+      expect(x1).toBeLessThanOrEqual(b.x0 + b.w + 0.01);
+      expect(y1).toBeLessThanOrEqual(b.y0 + b.h + 0.01);
+    }
+  });
+  it('a flat card is the block footprint, so connections end at its edge', () => {
+    const n = node('a', 2, 3);
+    const box = blockBox(n, FLAT), [cx, cy] = FLAT.P(2, 3);
+    expect(cy - box.y0).toBeCloseTo(radiusOf('vm') * FLAT_CELL + 4, 6);
+    expect(cx).toBeCloseTo((box.x0 + box.x1) / 2, 6);
+  });
+  it('flat zone tabs sit on the border, top left first, and clear of the corner', () => {
+    const z = { kind: 'subnet', x: 1, y: 2, w: 8, h: 5 };
+    const c = tabCandidates(z, FLAT, 120);
+    expect(c[0]).toEqual([FLAT_CELL + 74, 2 * FLAT_CELL]);
+    expect(c).toHaveLength(4);
+    // The 3D candidates are unchanged when no projection is given.
+    expect(tabCandidates(z)).toEqual(tabCandidates(z, ISO));
+  });
+});
+
+describe('flat connections clear the names', () => {
+  it('an arrow arriving from below stops under the name; one arriving from the side does not move', () => {
+    expect(clearFlatLabels([[0, 300], [0, 50]])).toEqual([[0, 300], [0, 50 + FLAT_LABEL]]);
+    expect(clearFlatLabels([[0, 50], [0, 300]])).toEqual([[0, 50 + FLAT_LABEL], [0, 300]]);
+    expect(clearFlatLabels([[0, 0], [200, 0]])).toEqual([[0, 0], [200, 0]]);
+    // Too short to shorten: left alone.
+    expect(clearFlatLabels([[0, 100], [0, 60]])).toEqual([[0, 100], [0, 60]]);
   });
 });

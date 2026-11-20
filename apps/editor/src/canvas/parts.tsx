@@ -2,7 +2,7 @@
 import { memo, useId, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { roleInfo, type DNode, type DZone, type EdgeKind } from '@archboard/engine';
 import { show, zoneLabel, type PackId, type Shown } from '../catalog/packs.ts';
-import { P, IX, IY, RB, STK, SHAPES, isCyl, f, pts, rounded, pillWidth, type Pt } from './geometry.ts';
+import { P, IX, IY, RB, STK, SHAPES, FLAT, FLAT_CELL, isCyl, f, pts, rounded, pillWidth, type Pt } from './geometry.ts';
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 const cssVar = (name: string, value: string) => ({ [name]: value }) as CSSProperties;
@@ -82,17 +82,53 @@ interface BlockProps {
   node: DNode;
   pack: PackId;
   selected: boolean;
+  /** Seen from above (the flat view): a card with a hard shadow instead of a solid. */
+  flat?: boolean;
   onPointerDown?: (e: PointerEvent<SVGGElement>, id: string) => void;
   onKeyDown?: (e: KeyboardEvent<SVGGElement>, id: string) => void;
 }
 
 /** One block standing on its ground cell. Pointer events on the group: painter's order decides which block is on top. */
-export const Block = memo(function Block({ node: n, pack, selected, onPointerDown, onKeyDown }: BlockProps) {
+export const Block = memo(function Block({ node: n, pack, selected, flat, onPointerDown, onKeyDown }: BlockProps) {
   const clipId = useId();
   const r = roleInfo(n.role), sh = SHAPES[r.shape], sv = show(n.role, pack, n.product, n.icon);
-  const [cx, cy] = P(n.x, n.y), H = sh.h, ty = cy - H;
+  const [cx, cy] = flat ? FLAT.P(n.x, n.y) : P(n.x, n.y), H = sh.h, ty = cy - H;
   const parts: ReactNode[] = [];
   let labelY: number, ports: Pt[];
+
+  if (flat) {
+    // A card the size of the block's footprint (a disc for stores), with the neo-brutalist hard shadow. Servers keep their
+    // dark face and show three status lights; the sticker sits in the middle, the name and kind under the card.
+    const hs = (isCyl(sh) ? sh.r : sh.s) * FLAT_CELL;
+    const shape = (cls: string, grow = 0, dx = 0) =>
+      isCyl(sh) ? <circle className={cls} cx={f(cx + dx)} cy={f(cy + dx)} r={f(hs + grow)} />
+        : <rect className={cls} x={f(cx - hs - grow + dx)} y={f(cy - hs - grow + dx)} width={f(2 * (hs + grow))} height={f(2 * (hs + grow))} rx={10 + grow} />;
+    if (selected) parts.push(<g key="halo">{shape('halo', 2)}</g>);
+    parts.push(<g key="sh">{shape('f-shadow', 0, 4)}</g>, <g key="face">{shape('left')}</g>, <g key="ol">{shape('ol')}</g>);
+    if (isCyl(sh)) parts.push(<circle key="ring" className="ol thin" cx={f(cx)} cy={f(cy)} r={f(hs - 8)} />);
+    if (r.shape === 'server') for (let i = 0; i < 3; i++) parts.push(<circle key={`led${i}`} className="led" cx={f(cx - hs + 12 + i * 9)} cy={f(cy + hs - 11)} r={2.6} />);
+    labelY = cy + hs + 17;
+    ports = [[cx - hs, cy], [cx + hs, cy]];
+    return (
+      <g
+        className={`blk flat${r.shape === 'server' ? ' server' : ''}`}
+        style={cssVar('--c', r.shape === 'server' ? 'var(--server)' : `var(--cat-${r.category})`)}
+        data-block={n.id}
+        tabIndex={0}
+        role="button"
+        aria-label={`${n.label}, ${r.name}${sv.kind !== 'line' ? `, shown as ${sv.name}` : ''}`}
+        aria-pressed={selected}
+        onPointerDown={onPointerDown ? (e) => onPointerDown(e, n.id) : undefined}
+        onKeyDown={onKeyDown ? (e) => onKeyDown(e, n.id) : undefined}
+      >
+        {parts}
+        <Sticker x={cx} y={r.shape === 'server' ? cy - 4 : cy} s={sv} />
+        <text className="name" x={f(cx)} y={f(labelY)}>{clip(n.label, 16)}</text>
+        <text className="sub" x={f(cx)} y={f(labelY + 14)}>{clip(sv.short, 16)}</text>
+        {selected && ports.map(([x, y], i) => <rect key={i} className="port" data-port={n.id} x={f(x - 6)} y={f(y - 6)} width={12} height={12} rx={2.5}><title>Drag to another block to connect</title></rect>)}
+      </g>
+    );
+  }
 
   if (isCyl(sh)) {
     const rx = Math.SQRT2 * sh.r * IX, ry = Math.SQRT2 * sh.r * IY;
@@ -159,11 +195,22 @@ export const Block = memo(function Block({ node: n, pack, selected, onPointerDow
 });
 
 /** A zone: networks and regions are raised plates; subnets, failure zones and groups are dashed areas on the ground. */
-export function ZoneShape({ z, selected }: { z: DZone; selected?: boolean }) {
+export function ZoneShape({ z, selected, flat }: { z: DZone; selected?: boolean; flat?: boolean }) {
   const c: Pt[] = [P(z.x, z.y), P(z.x + z.w, z.y), P(z.x + z.w, z.y + z.h), P(z.x, z.y + z.h)];
   const plate = z.kind === 'network' || z.kind === 'region';
   const v = z.kind === 'network' ? '--zone-vpc' : z.kind === 'region' || z.kind === 'zone' ? '--zone-region' : z.access === 'public' ? '--zone-public' : '--zone-private';
   const style = cssVar('--z', `var(${v})`);
+  if (flat) {
+    // From above: a rounded area; networks and regions solid with a hard shadow, the others dashed on the ground.
+    const [x0, y0] = FLAT.P(z.x, z.y), [x1, y1] = FLAT.P(z.x + z.w, z.y + z.h), w = f(x1 - x0), h = f(y1 - y0);
+    return (
+      <g className={`zone flat${selected ? ' selected' : ''}`} style={style} data-zone={z.id}>
+        {plate && <rect className="z-side" x={f(x0 + 5)} y={f(y0 + 5)} width={w} height={h} rx={12} />}
+        <rect className="z-top" x={f(x0)} y={f(y0)} width={w} height={h} rx={12} />
+        <rect className={`z-ol${plate ? '' : ' dash'}`} x={f(x0)} y={f(y0)} width={w} height={h} rx={12} />
+      </g>
+    );
+  }
   if (!plate) {
     return (
       <g className={`zone${selected ? ' selected' : ''}`} style={style} data-zone={z.id}>
@@ -206,12 +253,12 @@ export function zoneTabWidth(z: DZone, pack: PackId): number {
 }
 
 /** The resize handle at a selected zone's far corner. */
-export function ZoneResize({ z, onPointerDown }: { z: DZone; onPointerDown: (e: PointerEvent<SVGGElement>, id: string) => void }) {
-  const [x, y] = P(z.x + z.w, z.y + z.h);
+export function ZoneResize({ z, flat, onPointerDown }: { z: DZone; flat?: boolean; onPointerDown: (e: PointerEvent<SVGGElement>, id: string) => void }) {
+  const [x, y] = (flat ? FLAT.P : P)(z.x + z.w, z.y + z.h);
   return (
     <g className="resize-handle" data-handle={z.id} onPointerDown={(e) => onPointerDown(e, z.id)}>
       <title>Drag to resize {z.label}</title>
-      <polygon points={pts([[x, y - 9], [x + 15, y], [x, y + 9], [x - 15, y]])} />
+      {flat ? <rect x={f(x - 8)} y={f(y - 8)} width={16} height={16} rx={3} /> : <polygon points={pts([[x, y - 9], [x + 15, y], [x, y + 9], [x - 15, y]])} />}
     </g>
   );
 }
