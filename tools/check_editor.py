@@ -272,6 +272,21 @@ try:
     p.js("document.querySelector('button[aria-label=\"3D\"]').click();")
     time.sleep(0.6)
 
+    # 16. Auto-layout (ELK in a worker): positions change, memberships do not, and Undo puts everything back.
+    before = saved(p)
+    p.js("document.querySelector('button[aria-label=\"Auto-layout\"]').click();")
+    for _ in range(60):
+        time.sleep(0.25)
+        if "Laid out" in (p.js("return document.querySelector('.notice')?.innerText || '';") or ""):
+            break
+    after = saved(p)
+    pos = lambda d: {n["id"]: (n["x"], n["y"]) for n in d["nodes"]}
+    zones = lambda d: {n["id"]: n.get("zone") for n in d["nodes"]}
+    check("Auto-layout moves blocks and keeps every zone membership", pos(after) != pos(before) and zones(after) == zones(before))
+    p.js("document.activeElement && document.activeElement.blur();")
+    key(p, "z", "KeyZ", mods=2)
+    check("Undo puts the layout back in one step", pos(saved(p)) == pos(before))
+
     # Leave a block selected for the screenshot.
     x, y = center(p, '[data-block="n5"] .top')
     p.call("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y, button="left", clickCount=1)

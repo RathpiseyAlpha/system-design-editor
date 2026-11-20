@@ -183,7 +183,7 @@ textarea.input { font: 400 14px/21px var(--font-prose); resize: vertical; }
 button.pal-item { width: 100%; background: transparent; color: var(--ink); text-align: left; cursor: grab; font: inherit; }
 button.pal-item:active { cursor: grabbing; }
 .canvas-wrap { position: relative; min-width: 0; min-height: 0; display: grid; }
-.notice { position: absolute; top: 12px; left: 50%; translate: -50% 0; z-index: 4; max-width: min(560px, calc(100% - 24px)); display: grid; grid-template-columns: 18px 1fr auto;
+.notice { position: absolute; top: 56px; left: 50%; translate: -50% 0; z-index: 4; max-width: min(560px, calc(100% - 24px)); display: grid; grid-template-columns: 18px 1fr auto;
   gap: 10px; align-items: start; padding: 8px 8px 8px 12px; background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-control); box-shadow: var(--pop); font: 400 13px/19px var(--font-prose); }
 .notice > svg { width: 16px; height: 16px; margin-top: 2px; }
 .notice b { font: 700 13px/19px var(--font-mono); }

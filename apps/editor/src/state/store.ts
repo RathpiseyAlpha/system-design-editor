@@ -51,6 +51,8 @@ interface EditorState {
   setConnectFrom: (id: string | null) => void;
   rotate: () => void;
   setLayout: (l: 'canvas' | 'split' | 'code') => void;
+  /** Replace positions with an auto-layout: one undo step, and the view fits the result. */
+  applyLayout: (d: Diagram) => void;
 
   add: (role: string, at?: [number, number]) => void;
   move: (id: string, x: number, y: number) => void;
@@ -170,6 +172,10 @@ export const useEditor = create<EditorState>()((set, get) => ({
   setConnectFrom: (connectFrom) => set({ connectFrom }),
   rotate: () => set((s) => ({ turn: ((s.turn + 1) % 4) as 0 | 1 | 2 | 3, docKey: s.docKey + 1 })),
   setLayout: (layout) => set({ layout, connectFrom: null }),
+  applyLayout: (d) => {
+    get().commit(d);
+    set((s) => ({ docKey: s.docKey + 1 }));
+  },
 
   add: (role, at) => {
     const [x, y] = at ?? get().viewCenter();

@@ -9,6 +9,7 @@ import { moveZone, resizeZone } from '../state/ops.ts';
 import { Block, Pill, Wire, ZoneResize, ZoneShape, ZoneTab, zoneTabWidth } from './parts.tsx';
 import { P, LIFT, bounds, paintOrder, route, snap, toGround, f, rot, unrot, rotRect, unrotRect, rotateDiagram, placeLabels, blockBox, tabCandidates, edgeLabelCandidates, pillWidth, type Pt, type Turn } from './geometry.ts';
 import { Icon } from '../ui/Icon.tsx';
+import { runLayout } from '../layout/runLayout.ts';
 
 /** Drag-and-drop type for palette items: a role id, or "zone:<kind>[:<access>]". */
 export const ROLE_MIME = 'application/x-archboard-role';
@@ -141,6 +142,20 @@ export function Canvas() {
   diagramRef.current = diagram;
   /** A connection being drawn from a port: from its block to the pointer, in layer coordinates. */
   const [rubber, setRubber] = useState<{ from: string; a: Pt; b: Pt } | null>(null);
+  const [laying, setLaying] = useState(false);
+  const layOut = async () => {
+    const s = useEditor.getState();
+    if (laying || !s.diagram.nodes.length) return;
+    setLaying(true);
+    try {
+      s.applyLayout(await runLayout(s.diagram));
+      s.setNotice({ kind: 'ok', title: 'Laid out. Undo puts everything back where it was.' });
+    } catch (err) {
+      s.setNotice({ kind: 'bad', title: 'The layout could not be made.', lines: [String((err as Error).message ?? err)] });
+    } finally {
+      setLaying(false);
+    }
+  };
 
   useEffect(() => {
     const svg = svgRef.current!;
@@ -351,7 +366,10 @@ export function Canvas() {
         </div>
       )}
       <div className="canvas-tools">
-        <button className="btn btn--sm" type="button" title="Rotate view (R)" onClick={() => useEditor.getState().rotate()}><Icon name="rotate" /><span className="lbl">Rotate view</span></button>
+        <button className="btn btn--sm" type="button" title="Arrange the whole diagram left to right" aria-label="Auto-layout" disabled={laying} onClick={layOut}>
+          <Icon name="layout" /><span className="lbl">{laying ? 'Laying out…' : 'Auto-layout'}</span>
+        </button>
+        <button className="btn btn--sm" type="button" title="Rotate view (R)" aria-label="Rotate view" onClick={() => useEditor.getState().rotate()}><Icon name="rotate" /><span className="lbl">Rotate view</span></button>
       </div>
       <div className="zoombar">
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}><Icon name="minus" /></button>
