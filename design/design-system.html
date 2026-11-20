@@ -294,6 +294,73 @@ svg.iso text, svg.solo text, svg.zones-demo text { font-family: var(--font-mono)
 .state-grid figcaption { font: var(--t-hint); color: var(--muted); text-align: center; }
 svg.solo { width: 170px; height: 189px; overflow: visible; }
 svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; margin-bottom: var(--s3); }
+/* ---------- Simulator (Screen E) ---------- */
+.load { opacity: .5; }
+.load.ok { fill: var(--ok); } .load.warn { fill: var(--warn); } .load.bad { fill: var(--bad); }
+.blk.off { filter: grayscale(1); opacity: .45; }
+.blk.off .ol { stroke-dasharray: 5 4; }
+.zone.off .z-top { fill: var(--sunken); }
+.zone.off .z-ol { stroke: var(--bad); }
+.wire.dead { stroke: var(--bad); stroke-dasharray: 3 6; opacity: .75; }
+.dot { fill: var(--port); stroke: var(--edge); stroke-width: 1.25; }
+.trace-ring { fill: none; stroke: var(--marker-strong); stroke-width: 3; }
+.trace-dot { fill: var(--marker); stroke: var(--edge); stroke-width: 2; }
+.pill use { color: currentColor; }
+.pill.bad rect.face { fill: var(--bad-soft); stroke: var(--bad); } .pill.bad .shadow { fill: var(--bad); } .pill.bad text, .pill.bad use { fill: var(--bad); color: var(--bad); }
+.pill.warn use { color: var(--warn); }
+.pill.ok rect.face { fill: var(--ok-soft); stroke: var(--ok); } .pill.ok .shadow { fill: var(--ok); } .pill.ok text { fill: var(--ok); }
+.simgrid { display: grid; grid-template-columns: 272px minmax(0, 1fr) 288px; min-height: 0; }
+.side--scn { border-right: var(--bw) solid var(--edge); }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--s3); border-bottom: 1px solid var(--line); }
+.panel-head h3 { margin: 0; font-size: 14px; }
+.scn-list { display: grid; gap: 4px; padding: var(--s2); overflow: auto; align-content: start; min-height: 0; }
+.scn { border: var(--bw-fine) solid transparent; border-radius: var(--r-control); padding: 5px 8px; display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; align-items: start; }
+.scn input[type="checkbox"] { width: 16px; height: 16px; margin: 1px 0 0; accent-color: var(--marker-strong); }
+.scn b { font: 700 12px/18px var(--font-mono); }
+.scn small { grid-column: 2; font: var(--t-hint); color: var(--muted); }
+.scn.on { border-color: var(--edge); background: var(--paper); box-shadow: var(--pop-sm); }
+.scn:not(.on) small { display: none; }   /* an unchecked preset is one line; its description shows once picked */
+.seg.keep .lbl { display: inline; }      /* the mode switch keeps its words at every size */
+.scn .fields { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; font: var(--t-hint); }
+.scn .fields .input { width: 70px; min-height: 26px; padding: 2px 6px; font-size: 12px; }
+.scn .fields .select { width: 96px; }
+.expect { border-top: 1px solid var(--line); padding: 8px var(--s3) 10px; font: var(--t-hint); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.expect .input { width: 54px; min-height: 26px; padding: 2px 6px; font-size: 12px; }
+.narration { position: absolute; left: 12px; right: 12px; top: 12px; z-index: 2; background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-control);
+  box-shadow: var(--pop); padding: 8px 12px; display: grid; gap: 2px; padding-right: 190px; }
+.narration .step { font: 700 11px/16px var(--font-mono); color: var(--muted); display: flex; gap: 12px; }
+.narration b { font: 700 13px/18px var(--font-mono); }
+.narration p { margin: 0; font: 400 13px/19px var(--font-prose); }
+.narration .row { gap: 6px; position: absolute; right: 12px; top: 10px; }
+.runbar { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-control); box-shadow: var(--pop-sm); }
+.runbar .seg button { padding: 2px 7px; }
+.timeline { position: relative; flex: 1; height: 30px; min-width: 120px; }
+.timeline .track { position: absolute; left: 0; right: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--sunken); border: 1px solid var(--line); }
+.timeline .done { position: absolute; left: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--marker-strong); }
+.timeline .thumb { position: absolute; top: 8px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--marker); border: var(--bw) solid var(--edge); }
+.timeline .mark { position: absolute; top: 9px; width: 2px; height: 14px; background: var(--edge); }
+.timeline .mark span { position: absolute; top: -10px; left: 4px; font: 600 10px/12px var(--font-mono); white-space: nowrap; color: var(--muted); }
+.timeline .mark.bad { background: var(--bad); } .timeline .mark.bad span { color: var(--bad); }
+.clock { font: 700 12px/16px var(--font-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.zoombar.top { bottom: 72px; }
+.results { padding: var(--s3); display: grid; gap: var(--s3); align-content: start; overflow: auto; min-height: 0; }
+.verdict { border: var(--bw) solid var(--bad); border-radius: var(--r-control); background: var(--bad-soft); box-shadow: 3px 3px 0 var(--bad); padding: 10px 12px; display: grid; gap: 6px; }
+.verdict.ok { border-color: var(--ok); background: var(--ok-soft); box-shadow: 3px 3px 0 var(--ok); }
+.verdict p { margin: 0; font: 400 13px/19px var(--font-prose); color: var(--ink); }
+.verdict .hint { font: 600 12px/18px var(--font-mono); border-top: 1px dashed currentColor; padding-top: 6px; color: var(--ink); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tile { border: var(--bw-fine) solid var(--line); border-radius: var(--r-control); padding: 6px 8px; background: var(--paper); min-width: 0; }
+.tile small { display: block; font: var(--t-hint); color: var(--muted); }
+.tile b { font: 800 16px/22px var(--font-mono); font-variant-numeric: tabular-nums; }
+.tile span { font: var(--t-hint); color: var(--muted); }
+.tile.wide { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+.events { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font: 400 12px/17px var(--font-prose); }
+.events li { display: grid; grid-template-columns: 38px 1fr; gap: 6px; }
+.events time { font: 700 11px/17px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.indicative { font: var(--t-hint); color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+.cap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cap-grid .input::placeholder { color: var(--muted); opacity: .8; }
 @media (max-width: 640px) { .specimen div { grid-template-columns: 1fr; gap: 2px; } }
 </style>
 
@@ -345,6 +412,12 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
     <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
     <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12-7.5z"/></symbol>
+    <symbol id="i-step" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14l10-7z"/><path d="M19 5v14"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5v14L9 12z"/><path d="M5 5v14"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><path d="M12 3v8M6.3 6.5a8 8 0 1 0 11.4 0"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="m12 17 4-5"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/></symbol>
     <symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
     <marker id="head" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path class="arrowhead" d="M0 0 10 5 0 10z"/></marker>
   </defs>
@@ -362,6 +435,7 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
         <span class="chip chip--storage">Diagram as code</span>
         <span class="chip chip--database">Any stack, swappable icon packs</span>
         <span class="chip chip--compute">Laptop to monitor</span>
+        <span class="chip chip--network">Simulator</span>
       </div>
     </div>
     <div class="seg" role="group" aria-label="Theme">
@@ -379,6 +453,7 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
       <li><strong>Real icons, shown as they are</strong>Each block carries its product's real icon on a light sticker on its top face: the official AWS icon or the project's own logo, never redrawn, recoloured or skewed.</li>
       <li><strong>Ink and pressure</strong>Ink outlines and hard shadows; pressing sinks into the shadow. The green highlighter marks what is active: the open view, the primary action, the selection.</li>
       <li><strong>Text and canvas are one diagram</strong>Edit either side and the other follows. Errors stay on their line while the canvas keeps the last good state.</li>
+      <li><strong>Test it before you build it</strong>The simulator runs spikes, failures and slow parts against the diagram. Blocks fill with load, failed parts switch off, and a plain verdict names what breaks. It is a teaching model with indicative numbers, not a cloud emulator.</li>
       <li><strong>Fits the screen you have</strong>Designed at 1280 × 720 first (a 15.6" laptop at 150% scaling) and grows to 1920 × 1080 and beyond: panels narrow, the palette folds into a rail, density tightens on short screens.</li>
     </ul>
   </section>
@@ -665,6 +740,80 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
     </div>
   </section>
 
+  <section class="board">
+    <div class="board-head">
+      <h2 style="margin:0">Screen E: simulator at 1280 × 720</h2>
+      <p class="muted">Simulate mode, paused at 2:34 of a combined scenario: a traffic spike at 1:00, then zone-b goes down at 2:00. Blocks fill with their load, dots show traffic, zone-b is switched off, and Step is tracing one request. Shown with the AWS pack; the result is the same in every pack because the engine reads roles.</p>
+    </div>
+    <div class="vp-wrap"><div class="viewport" id="vpE" data-w="1280" data-h="720">
+      <div class="app">
+        <div class="topbar">
+          <span class="brand"><svg class="brand-mark" aria-hidden="true"></svg>Archboard</span>
+          <span class="vsep"></span>
+          <span class="doc-title">online-shop</span>
+          <span class="spacer"></span>
+          <div class="seg keep" role="group" aria-label="Mode"><button type="button" aria-pressed="false" aria-label="Design"><svg><use href="#i-pencil"/></svg><span class="lbl">Design</span></button><button type="button" aria-pressed="true" aria-label="Simulate"><svg><use href="#i-gauge"/></svg><span class="lbl">Simulate</span></button></div>
+          <select class="input select pack-select" aria-label="Show as"><option>Show as: Generic</option><option selected>Show as: AWS</option><option>Show as: Open source</option></select>
+          <button class="btn" type="button"><svg><use href="#i-download"/></svg>Save scenario</button>
+        </div>
+        <div class="simgrid">
+          <aside class="side side--scn">
+            <div class="panel-head"><h3>Scenario</h3><select class="input select" style="width:auto; min-height:28px; font-size:12px" aria-label="Saved scenarios"><option>Spike, then zone-b down</option><option>New scenario</option></select></div>
+            <div class="scn-list">
+              <label class="scn"><input type="checkbox"><b>Steady load</b><small>Requests per second, all the time</small></label>
+              <label class="scn on"><input type="checkbox" checked><b>Traffic spike</b><small>Load jumps, then stays</small>
+                <span class="fields"><input class="input" value="200" aria-label="From requests per second">to<input class="input" value="2,000" aria-label="To requests per second">req/s at<input class="input" value="1:00" aria-label="At" style="width:52px"></span></label>
+              <label class="scn"><input type="checkbox"><b>Block fails</b><small>One block switches off</small></label>
+              <label class="scn on"><input type="checkbox" checked><b>Zone goes down</b><small>Every block inside it switches off</small>
+                <span class="fields"><select class="input select" aria-label="Zone"><option>zone-b</option><option>zone-a</option></select>at<input class="input" value="2:00" aria-label="At" style="width:52px"></span></label>
+              <label class="scn"><input type="checkbox"><b>Region goes down</b><small>A whole region switches off</small></label>
+              <label class="scn"><input type="checkbox"><b>Slow database</b><small>Slower and less capacity</small></label>
+              <label class="scn"><input type="checkbox"><b>Cache misses</b><small>Hit rate drops</small></label>
+              <label class="scn"><input type="checkbox"><b>Queue backlog</b><small>Consumers fall behind</small></label>
+              <label class="scn"><input type="checkbox"><b>Link cut</b><small>One connection stops</small></label>
+            </div>
+            <div class="expect">Handles it when errors stay under <input class="input" value="1%" aria-label="Error rate limit"> and p95 under <input class="input" value="500" aria-label="p95 limit in milliseconds"> ms</div>
+          </aside>
+          <div class="canvas" id="canvasE">
+            <div class="narration" id="narration"></div>
+            <div class="zoombar top"><button type="button" aria-label="Zoom out"><svg><use href="#i-minus"/></svg></button><span class="zoom-val">100%</span><button type="button" aria-label="Zoom in"><svg><use href="#i-plus"/></svg></button><button type="button" aria-label="Fit to screen"><svg><use href="#i-fit"/></svg></button></div>
+            <div class="runbar">
+              <button class="btn btn--primary" type="button"><svg><use href="#i-play"/></svg>Run</button>
+              <button class="btn" type="button"><svg><use href="#i-step"/></svg>Step</button>
+              <button class="btn btn--icon btn--ghost" type="button" aria-label="Reset"><svg><use href="#i-rotate"/></svg></button>
+              <div class="seg" role="group" aria-label="Speed"><button type="button" aria-pressed="false">×1</button><button type="button" aria-pressed="true">×10</button><button type="button" aria-pressed="false">×60</button></div>
+              <div class="timeline" id="timeline" aria-label="Scenario timeline"></div>
+              <span class="clock" id="clock"></span>
+            </div>
+          </div>
+          <aside class="side side--r"><div class="results" id="results"></div></aside>
+        </div>
+        <div class="statusbar"><span class="chip">6 services</span><span class="chip">2 zones</span><span class="spacer"></span><span>Press <span class="kbd">Space</span> to run or pause, <span class="kbd">N</span> for the next step</span></div>
+      </div>
+    </div></div>
+    <div class="cols" style="margin-top: var(--s4)">
+      <div class="panel">
+        <h3>Capacity settings (inspector, Simulate mode)</h3>
+        <p class="note" style="margin: 0 0 var(--s3)">All optional. An empty field uses the role default, shown in grey. Labs lock capacity, latency and hit rate.</p>
+        <div class="cap-grid">
+          <div class="field"><label for="c-inst">Instances</label><input class="input" id="c-inst" value="2"></div>
+          <div class="field"><label for="c-cap">Capacity, req/s each</label><input class="input" id="c-cap" value="600"></div>
+          <div class="field"><label for="c-lat">Latency, ms</label><input class="input" id="c-lat" placeholder="25 (default)"></div>
+          <div class="field"><label for="c-as">Autoscaling</label><select class="input select" id="c-as"><option>Off</option><option>On</option></select></div>
+          <div class="field"><label for="c-min">Minimum</label><input class="input" id="c-min" placeholder="2" disabled></div>
+          <div class="field"><label for="c-max">Maximum</label><input class="input" id="c-max" placeholder="6" disabled></div>
+        </div>
+      </div>
+      <div class="panel" style="display:grid; gap: var(--s3)">
+        <h3 style="margin:0">Verdict, the other outcome</h3>
+        <div class="verdict ok"><span class="row" style="gap:8px"><span class="chip chip--ok"><svg><use href="#i-check"/></svg>Handles it</span><b class="mono">p95 310 ms, 0% errors</b></span>
+          <p>The spike to 2,000 requests per second is served in both zones. Busiest block: app-1 at 83%.</p>
+          <span class="hint">Next: try "Zone goes down" to find what breaks.</span></div>
+        <p class="note" style="margin:0">The verdict is a plain sentence first, numbers second. "Breaks" names the bottleneck or single point of failure and gives one hint.</p>
+      </div>
+    </div>
+  </section>
+
   <section>
     <h2>Icon packs</h2>
     <p class="muted" style="font: 400 15px/24px var(--font-prose); max-width: 80ch">Every role in the neutral catalog, with what each pack shows for it. AWS icons come from the official AWS Architecture Icons package (31 July 2026 release), unmodified. Open-source logos come from pinned CC0 collections and the CNCF; each product is listed with the licence read from its own repository. Logos and names are their owners' trademarks, used to name the products.</p>
@@ -802,11 +951,12 @@ function rounded(points, r) {
 function pill(x, y, text, o = {}) {
   const k = o.kind ? ` ${o.kind}` : '';
   const sub = o.sub ? `  ${o.sub}` : '';
-  const ic = o.icon ? 20 : 0;
+  const ic = o.icon || o.sym ? 20 : 0;
   const w = (text.length + sub.length) * 7.25 + 18 + ic, h = 22, x0 = x - w / 2;
   return `<g class="pill${k}"><rect class="shadow" x="${f(x0 + 2)}" y="${f(y - h / 2 + 2)}" width="${f(w)}" height="${h}" rx="11"/>` +
     `<rect class="face" x="${f(x0)}" y="${f(y - h / 2)}" width="${f(w)}" height="${h}" rx="11"/>` +
     (o.icon ? `<image href="${o.icon}" x="${f(x0 + 5)}" y="${f(y - 8)}" width="16" height="16"/>` : '') +
+    (o.sym ? `<use href="#i-${o.sym}" x="${f(x0 + 6)}" y="${f(y - 7)}" width="14" height="14"/>` : '') +
     `<text x="${f(x + ic / 2)}" y="${f(y + 0.5)}">${esc(text)}${o.sub ? `<tspan class="k">${esc(sub)}</tspan>` : ''}</text></g>`;
 }
 
@@ -823,7 +973,13 @@ function blockSVG(n, o = {}) {
   const r = role(n.role), sh = SHAPES[r.shape], sv = show(n.role, o.pack || 'generic', n.product);
   const [cx, gy0] = P(n.x, n.y);
   const cy = gy0 - (o.raise || 0), H = sh.h, ty = cy - H;
-  let g = `<g class="blk" style="--c:var(--cat-${r.category})">`, labelY, ports, flagAt, topY;
+  // Simulator: o.util is utilisation (0.83 = 83%), o.off means switched off. Status: ok < 70%, warn < 100%, bad from 100%.
+  const util = o.off ? null : o.util;
+  const st = util == null ? null : util >= 1 ? 'bad' : util >= 0.7 ? 'warn' : 'ok';
+  const hf = util == null ? 0 : H * Math.min(util, 1);
+  if (st === 'bad') o = { ...o, badge: { text: `Over capacity ${Math.round(util * 100)}%`, kind: 'bad', sym: 'alert' } };
+  else if (st === 'warn') o = { ...o, badge: { text: `Busy ${Math.round(util * 100)}%`, kind: 'warn', sym: 'gauge' } };
+  let g = `<g class="blk${o.off ? ' off' : ''}" style="--c:var(--cat-${r.category})">`, labelY, ports, flagAt, topY;
   if (r.shape === 'cyl') {
     const rx = Math.SQRT2 * sh.r * IX, ry = Math.SQRT2 * sh.r * IY;
     if (o.raise) g += `<ellipse class="ground" cx="${f(cx)}" cy="${f(gy0)}" rx="${f(rx)}" ry="${f(ry)}"/>`;
@@ -832,6 +988,7 @@ function blockSVG(n, o = {}) {
     g += `<path class="left" d="${side} Z"/>`;
     g += `<path class="right" d="M${f(cx)} ${f(ty + ry)} L${f(cx)} ${f(cy + ry)} A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(cy)} L${f(cx + rx)} ${f(ty)} Z"/>`;
     g += `<ellipse class="top" cx="${f(cx)}" cy="${f(ty)}" rx="${f(rx)}" ry="${f(ry)}"/>`;
+    if (hf > 0) g += `<path class="load ${st}" d="M${f(cx - rx)} ${f(cy - hf)} L${f(cx - rx)} ${f(cy)} A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(cy)} L${f(cx + rx)} ${f(cy - hf)} A${f(rx)} ${f(ry)} 0 0 1 ${f(cx - rx)} ${f(cy - hf)} Z"/>`;
     if (!o.mini) g += `<path class="ol thin" d="M${f(cx - rx)} ${f(ty + H * 0.5)} A${f(rx)} ${f(ry)} 0 0 0 ${f(cx + rx)} ${f(ty + H * 0.5)}"/>`;
     g += `<path class="ol" d="${side}"/><ellipse class="ol" cx="${f(cx)}" cy="${f(ty)}" rx="${f(rx)}" ry="${f(ry)}"/>`;
     labelY = ty + ry + 17; ports = [[cx - rx, cy - H / 2], [cx + rx, cy - H / 2]]; flagAt = [cx + rx * 0.7, ty - ry * 0.8]; topY = ty - ry;
@@ -844,7 +1001,9 @@ function blockSVG(n, o = {}) {
     if (o.selected) g += `<path class="halo" d="${hullD}"/>`;
     g += `<clipPath id="${id}"><path d="${hullD}"/></clipPath>`;
     g += `<path class="left" d="${hullD}"/>`;
-    g += `<g clip-path="url(#${id})"><polygon class="right" points="${pts([T(0, b), T(a + 2, 0), C(a + 2, 0), C(0, b + 2)])}"/><polygon class="top" points="${pts([T(0, -b - 2), T(a + 2, 0), T(0, b), T(-a - 2, 0)])}"/></g>`;
+    g += `<g clip-path="url(#${id})"><polygon class="right" points="${pts([T(0, b), T(a + 2, 0), C(a + 2, 0), C(0, b + 2)])}"/><polygon class="top" points="${pts([T(0, -b - 2), T(a + 2, 0), T(0, b), T(-a - 2, 0)])}"/>`;
+    if (hf > 0) g += `<polygon class="load ${st}" points="${pts([C(-a - 2, 2), C(0, b + 2), C(0, b - hf), C(-a - 2, -hf)])}"/><polygon class="load ${st}" points="${pts([C(0, b + 2), C(a + 2, 2), C(a + 2, -hf), C(0, b - hf)])}"/>`;
+    g += '</g>';
     g += `<path class="ol" d="${hullD}"/><polyline class="ol" points="${pts([T(-a + 1.2, 0), T(0, b), T(a - 1.2, 0)])}"/>`;
     g += `<line class="ol" x1="${f(cx)}" y1="${f(ty + b)}" x2="${f(cx)}" y2="${f(cy + b - 1.2)}"/>`;
     labelY = ty + b + 13; ports = [[cx - a, cy - H / 2], [cx + a, cy - H / 2]]; flagAt = [cx + a * 0.58, ty - b * 0.75]; topY = ty - b;
@@ -862,15 +1021,19 @@ function blockSVG(n, o = {}) {
     if (o.warn) g += `<g class="flag"><circle cx="${f(flagAt[0])}" cy="${f(flagAt[1])}" r="11"/><use href="#i-alert" x="${f(flagAt[0] - 7)}" y="${f(flagAt[1] - 7.5)}" width="14" height="14"/></g>`;
   }
   g += '</g>';
-  if (o.badge && !o.mini) g += pill(cx, topY - 26, o.badge.text, { kind: o.badge.kind });
+  if (o.badge && !o.mini) {
+    const b = pill(cx, topY - 26, o.badge.text, { kind: o.badge.kind, sym: o.badge.sym });
+    if (BADGES) BADGES.push(b); else g += b;   // in a diagram, status pills are painted last so nothing covers them
+  }
   return g;
 }
 
 function zoneSVG(z, o) {
   const c = [P(z.x, z.y), P(z.x + z.w, z.y), P(z.x + z.w, z.y + z.h), P(z.x, z.y + z.h)];
   const plate = z.kind === 'network' || z.kind === 'region';
-  const v = z.kind === 'network' ? '--zone-vpc' : z.kind === 'region' ? '--zone-region' : z.access === 'public' ? '--zone-public' : '--zone-private';
-  let g = `<g class="zone" style="--z:var(${v})">`, tab = '';
+  const v = z.kind === 'network' ? '--zone-vpc' : z.kind === 'region' || z.kind === 'zone' ? '--zone-region' : z.access === 'public' ? '--zone-public' : '--zone-private';
+  const down = (o.zoneOff || []).includes(z.id);
+  let g = `<g class="zone${down ? ' off' : ''}" style="--z:var(${v})">`, tab = '';
   if (plate) {
     const t = 10, d = (p) => [p[0], p[1] + t];
     g += `<polygon class="z-side" points="${pts([c[3], c[2], d(c[2]), d(c[3])])}"/>`;
@@ -887,8 +1050,14 @@ function zoneSVG(z, o) {
     const kindName = z.kind === 'subnet' ? `${z.access} subnet` : (names[z.kind] || z.kind);
     const gk = z.kind === 'subnet' ? `subnet-${z.access}` : z.kind;
     const gi = aws && CAT.packs.aws.groups && CAT.packs.aws.groups[gk] ? 'icons/' + CAT.packs.aws.groups[gk].icon : null;
-    const [mx, my] = plate ? P(z.x + Math.min(z.w * 0.3, 3), z.y) : P(z.x, z.y + Math.min(z.h * 0.5, 3.2));
-    tab = pill(mx + (plate ? 34 : -8), my - 16, z.label, { sub: kindName, icon: gi });
+    let [mx, my] = plate ? P(z.x + Math.min(z.w * 0.3, 3), z.y) : P(z.x, z.y + Math.min(z.h * 0.5, 3.2));
+    let dx = plate ? 34 : -8, dy = -16;
+    if (o.tabAt === 'corners') {   // busy diagrams: plates label their left corner, zones their right corner
+      [mx, my] = plate ? P(z.x, z.y + z.h) : P(z.x + z.w, z.y);
+      [dx, dy] = plate ? [40, 44] : [-6, -16];
+    }
+    tab = down ? pill(mx + dx, my + dy, z.label, { sub: 'down', kind: 'bad', sym: 'power' })
+      : pill(mx + dx, my + dy, z.label, { sub: kindName, icon: gi });
   }
   return { g, tab };
 }
@@ -914,21 +1083,55 @@ function diagramSVG(d, o = {}) {
       s += `<line class="gridline" x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/><line class="gridline" x1="${f(x3)}" y1="${f(y3)}" x2="${f(x4)}" y2="${f(y4)}"/>`;
     }
   }
-  let tabs = '', labels = '';
-  for (const z of d.zones) { const { g, tab } = zoneSVG(z, o); s += g; tabs += tab; }
+  // o.sim (simulator state): { util: {node: 0..n}, off: [node], zoneOff: [zone], cut: [edge], rates: {edge: req/s}, trace: {edge, t} }
+  const sim = o.sim || null, off = new Set(sim ? sim.off : []);
+  let tabs = '', labels = '', dots = '', trace = '';
+  for (const z of d.zones) { const { g, tab } = zoneSVG(z, { ...o, zoneOff: sim ? sim.zoneOff : [] }); s += g; tabs += tab; }
   for (const e of d.edges) {
     const scr = route(e, byId[e.from], byId[e.to]).map(([gx, gy]) => { const [x, y] = P(gx, gy); return [x, y - LIFT]; });
-    s += `<polyline class="wire" data-kind="${e.kind}" points="${pts(scr)}" marker-end="url(#head)"/>`;
-    if (e.label && !o.mini) {
+    const dead = sim && (off.has(e.from) || off.has(e.to) || (sim.cut || []).includes(e.id));
+    s += `<polyline class="wire${dead ? ' dead' : ''}" data-kind="${e.kind}" points="${pts(scr)}" marker-end="url(#head)"/>`;
+    const rate = sim && !dead ? sim.rates[e.id] : null;
+    const text = sim ? (rate ? `${rate.toLocaleString('en-US')} req/s` : null) : e.label;
+    if (text && !o.mini) {
       let best = 0, at = [0, 0];
       for (let i = 1; i < scr.length; i++) { const L = Math.hypot(scr[i][0] - scr[i - 1][0], scr[i][1] - scr[i - 1][1]); if (L > best) { best = L; at = [(scr[i][0] + scr[i - 1][0]) / 2, (scr[i][1] + scr[i - 1][1]) / 2]; } }
-      labels += pill(at[0], at[1], e.label);
+      labels += pill(at[0], at[1], text);
+    }
+    if (rate && !o.mini) dots += dotsSVG(scr, rate);
+    if (sim && sim.trace && sim.trace.edge === e.id && !o.mini) {
+      const [tx, ty] = pointAt(scr, sim.trace.t);
+      trace = `<circle class="trace-ring" cx="${f(tx)}" cy="${f(ty)}" r="13"/><circle class="trace-dot" cx="${f(tx)}" cy="${f(ty)}" r="6.5"/>`;
     }
   }
+  s += dots;
+  BADGES = [];
   for (const n of [...d.nodes].sort((a, b) => a.x + a.y - (b.x + b.y))) {
-    s += blockSVG(n, { pack: o.pack, selected: o.selected === n.id, warn: (o.warn || []).includes(n.id), badge: (o.badges || {})[n.id], mini: o.mini });
+    s += blockSVG(n, { pack: o.pack, selected: o.selected === n.id, warn: (o.warn || []).includes(n.id), badge: (o.badges || {})[n.id], mini: o.mini,
+      util: sim ? sim.util[n.id] : undefined, off: off.has(n.id) });
   }
-  return s + tabs + labels;
+  const badges = BADGES.join(''); BADGES = null;
+  return s + tabs + labels + badges + trace;
+}
+let BADGES = null;
+
+// Traffic dots along a connection: more dots for more traffic; still dots when the viewer asks for reduced motion.
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function pointAt(scr, t) {
+  const lens = scr.slice(1).map((p, i) => Math.hypot(p[0] - scr[i][0], p[1] - scr[i][1]));
+  let d = lens.reduce((a, b) => a + b, 0) * t;
+  for (let i = 0; i < lens.length; i++) {
+    if (d <= lens[i]) { const k = d / lens[i]; return [scr[i][0] + (scr[i + 1][0] - scr[i][0]) * k, scr[i][1] + (scr[i + 1][1] - scr[i][1]) * k]; }
+    d -= lens[i];
+  }
+  return scr[scr.length - 1];
+}
+function dotsSVG(scr, rate) {
+  const n = Math.min(4, 1 + Math.floor(rate / 700));
+  const len = scr.slice(1).reduce((a, p, i) => a + Math.hypot(p[0] - scr[i][0], p[1] - scr[i][1]), 0);
+  if (REDUCE) return Array.from({ length: n }, (_, i) => { const [x, y] = pointAt(scr, (i + 0.5) / n); return `<circle class="dot" cx="${f(x)}" cy="${f(y)}" r="4"/>`; }).join('');
+  const path = 'M' + scr.map(([x, y]) => `${f(x)} ${f(y)}`).join(' L'), dur = Math.max(1.6, len / 70);
+  return Array.from({ length: n }, (_, i) => `<circle class="dot" r="4"><animateMotion dur="${f(dur)}s" begin="-${f(i * dur / n)}s" repeatCount="indefinite" path="${path}"/></circle>`).join('');
 }
 
 // Screen-space bounds of a diagram, used to fit it into a canvas.
@@ -1070,10 +1273,85 @@ document.getElementById('phoneHead').innerHTML = `${icoHTML(show('relational-db'
   document.getElementById('excluded').innerHTML = Object.entries(CAT.packs.oss.excluded || {}).map(([k, v]) => `<span class="chip chip--flat" title="${esc(v)}">${esc(k)}: ${esc(v)}</span>`).join('');
 })();
 
+// ---------------- Screen E: the simulator. One table of numbers; every pill, label, tile and sentence reads from it.
+const SIM_DIAGRAM = {
+  format: 'archboard', version: 1, title: 'Online shop', show: 'aws',
+  zones: [
+    { id: 'zN', kind: 'network', label: 'shop-net', x: 2.6, y: 0, w: 10.8, h: 9.6 },
+    { id: 'zA', kind: 'zone', label: 'zone-a', parent: 'zN', x: 6.4, y: 0.5, w: 6.6, h: 3.9 },
+    { id: 'zB', kind: 'zone', label: 'zone-b', parent: 'zN', x: 6.4, y: 5.2, w: 6.6, h: 3.9 },
+  ],
+  nodes: [
+    { id: 'n1', role: 'client', label: 'Customers', x: 0, y: 4.8 },
+    { id: 'n2', role: 'load-balancer', label: 'web-lb', zone: 'zN', x: 4.4, y: 4.8 },
+    { id: 'n3', role: 'vm', label: 'app-1', zone: 'zA', x: 8.0, y: 2.45, sim: { instances: 2, capacity: 600 } },
+    { id: 'n5', role: 'relational-db', label: 'orders-db', zone: 'zA', x: 11.6, y: 2.45, sim: { capacity: 1500 } },
+    { id: 'n4', role: 'vm', label: 'app-2', zone: 'zB', x: 8.0, y: 7.15, sim: { instances: 2, capacity: 600 } },
+    { id: 'n6', role: 'cache', label: 'sessions', zone: 'zB', x: 11.6, y: 7.15 },
+  ],
+  edges: [
+    { id: 'e1', from: 'n1', to: 'n2', kind: 'request' },
+    { id: 'e2', from: 'n2', to: 'n3', kind: 'request', bend: 'zx', mid: 6.0 },
+    { id: 'e3', from: 'n2', to: 'n4', kind: 'request', bend: 'zx', mid: 6.0 },
+    { id: 'e4', from: 'n3', to: 'n5', kind: 'request' },
+    { id: 'e5', from: 'n3', to: 'n6', kind: 'request', bend: 'zx', mid: 9.5 },
+    { id: 'e6', from: 'n4', to: 'n6', kind: 'request' },
+  ],
+};
+// At 2:34: zone-b is down, so web-lb sends all 2,000 req/s to app-1 (2 x 600 = 1,200 capacity: 167%).
+// The 1,200 it serves all go to orders-db (the cache is off): 1,200 of 1,500 = 80%. web-lb: 2,000 of 20,000 = 10%.
+// p95 (indicative): 2 x (1 / 0.9 + 25 / 0.05 + 5 / 0.2) ms = about 1,050 ms.
+const SIM = {
+  at: 154, duration: 300, offered: 2000, served: 1200, p95: 1050, expectP95: 500,
+  util: { n2: 0.10, n3: 1.67, n5: 0.80 },
+  off: ['n4', 'n6'], zoneOff: ['zB'], cut: [],
+  rates: { e1: 2000, e2: 2000, e4: 1200 },
+  trace: { edge: 'e4', t: 0.18 },
+  marks: [[60, 'spike', ''], [120, 'zone-b down', 'bad']],
+};
+const n0 = (v) => v.toLocaleString('en-US');
+const clockOf = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const pct = (v) => `${Math.round(v * 100)}%`;
+function renderE() {
+  const failed = 1 - SIM.served / SIM.offered, app = SIM_DIAGRAM.nodes.find((n) => n.id === 'n3');
+  const appCap = app.sim.instances * app.sim.capacity;
+  document.getElementById('narration').innerHTML = `
+    <span class="step"><span>Step 4 of 6, at ${clockOf(SIM.at)}</span><span>one request</span></span>
+    <b>app-1 calls orders-db</b>
+    <p>zone-b is down, so web-lb sends every request to app-1. app-1 has room for ${n0(appCap)} of the ${n0(SIM.offered)} requests per second; this one got in. sessions is switched off, so app-1 reads the cart from orders-db instead of the cache.</p>
+    <span class="row"><button class="btn btn--sm" type="button"><svg><use href="#i-back"/></svg>Back</button><button class="btn btn--sm" type="button"><svg><use href="#i-step"/></svg>Next</button></span>`;
+  document.getElementById('timeline').innerHTML = `<span class="track"></span><span class="done" style="width:${pct(SIM.at / SIM.duration)}"></span>` +
+    SIM.marks.map(([t, label, k]) => `<span class="mark ${k}" style="left:${pct(t / SIM.duration)}"><span>${label}</span></span>`).join('') +
+    `<span class="thumb" style="left:${pct(SIM.at / SIM.duration)}"></span>`;
+  document.getElementById('clock').textContent = `${clockOf(SIM.at)} / ${clockOf(SIM.duration)}`;
+  document.getElementById('results').innerHTML = `
+    <div class="row" style="justify-content:space-between"><h3 style="margin:0; font-size:14px">Results at ${clockOf(SIM.at)}</h3><span class="chip chip--sm">indicative</span></div>
+    <div class="verdict"><span class="row" style="gap:8px"><span class="chip chip--bad"><svg><use href="#i-x"/></svg>Breaks</span><b class="mono">since ${clockOf(SIM.marks[1][0])}</b></span>
+      <p><b>Bottleneck:</b> app-1 at ${pct(SIM.util.n3)} of its capacity once zone-b went down.</p>
+      <p><b>Single point of failure:</b> orders-db, one instance, only in zone-a.</p>
+      <span class="hint">Hint: run the app tier with autoscaling (up to 6) in both zones, and add a standby database in zone-b.</span></div>
+    <div class="tiles">
+      <div class="tile"><small>Throughput</small><b>${n0(SIM.served)}</b> <span>of ${n0(SIM.offered)} req/s</span></div>
+      <div class="tile"><small>Error rate</small><b>${pct(failed)}</b></div>
+      <div class="tile"><small>p95 latency</small><b>${n0(SIM.p95)} ms</b> <span>target ${SIM.expectP95}</span></div>
+      <div class="tile"><small>Longest queue</small><b>none</b> <span>no queues</span></div>
+      <div class="tile wide"><span><small>Users served</small><span>${pct(1 - failed)} of requests succeed</span></span><span class="chip chip--bad"><svg><use href="#i-x"/></svg>No</span></div>
+    </div>
+    <div><h3 style="font-size:13px; margin:0 0 6px">What happened</h3>
+      <ul class="events">
+        <li><time>1:00</time><span>Spike to ${n0(SIM.offered)} req/s. App tier 83% busy, p95 310 ms: handled.</span></li>
+        <li><time>2:00</time><span>zone-b goes down: app-2 and sessions switch off.</span></li>
+        <li><time>${clockOf(SIM.at)}</time><span>${n0(SIM.served)} of ${n0(SIM.offered)} req/s served; ${pct(failed)} of requests fail.</span></li>
+      </ul></div>
+    <p class="indicative">Teaching model: indicative numbers, not a real cloud.</p>`;
+}
+
 function renderAll() {
   renderA();
-  ['vpB', 'vpC'].forEach((id) => fit(document.getElementById(id)));
+  renderE();
+  ['vpB', 'vpC', 'vpE'].forEach((id) => fit(document.getElementById(id)));
   requestAnimationFrame(() => {
+    drawCanvas(document.getElementById('canvasE'), SIM_DIAGRAM, { pack: 'aws', sim: SIM, tabAt: 'corners', pad: [128, 24, 70, 24] });
     drawCanvas(document.getElementById('canvasB'), DIAGRAM, { pack: 'oss', pad: [40, 40, 52, 40] });
     drawCanvas(document.getElementById('canvasC'), DIAGRAM, { pack: 'aws', warn: ['n4'], badges: { n4: { text: 'only 1 zone', kind: 'warn' } }, pad: [64, 40, 52, 40] });
     drawCanvas(document.getElementById('canvasD'), DIAGRAM, { selected: 'n5', pack: 'generic', zoom: 0.9, offset: [-50, -10] });

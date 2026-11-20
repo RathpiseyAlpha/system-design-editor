@@ -17,6 +17,10 @@ which adds an optional **learning mode** (challenges with checks). The core edit
 Feature model: the kind of tool Eraser (eraser.io) is for diagrams (a canvas and a "diagram as code" text view kept in
 sync, auto-layout, notes, export, embed), with a 3D look and generic roles. Text syntax, look and names are our own.
 
+It also has a **simulator** (section 13): run problem scenarios (traffic spikes, failures, slow databases, cut links)
+against the diagram and see whether the design copes with its resources and their capacity, ending in a plain verdict.
+It is a teaching model with indicative numbers, never a cloud emulator. **Labs** (section 14) build on it as a host add-on.
+
 Look: soft neo-brutalism after designed-to-scale.vercel.app (warm paper, ink outlines, hard offset shadows, mono type,
 isometric blocks on a faint diagonal grid). Tokens, components and screens: `design/` (open `design/design-system.html`).
 
@@ -98,8 +102,15 @@ knowing a vendor's name? do they read zones as containers? do they find and use 
 - **Learning mode** (an add-on a host turns on): hints from the rule engine, a challenge brief, "Check" with a result per rule.
 - More packs: Google Cloud, Azure, Kubernetes, if their icons' terms allow (section 5).
 
+### v3 (M4) — simulator (section 13)
+Simulate mode: scenario picker, run and step controls, blocks filling with load, moving traffic dots, failed blocks and zones
+switched off, results panel with a verdict, capacity settings per block, scenario files. Pack-independent; works at 1280 × 720.
+
+### v4 (M5) — labs (section 14)
+A host add-on: a brief, a starting diagram, scenarios to survive and behaviour checks, scored by the host through the checker API.
+
 ### Later
-Step-through mode (animate a request along the edges), cost estimate, Terraform export, AI first draft, real-time co-editing.
+Cost estimate, Terraform export, AI first draft, real-time co-editing.
 
 ### Not doing
 Deploying anything. Reading anyone's cloud account. Free drawing not tied to blocks (use a whiteboard for that).
@@ -162,6 +173,9 @@ Logos and product names are trademarks of their owners and are used only to name
   flat view draws them from above. The file does not depend on the view, zoom or rotation.
 - `product` optionally picks a product per pack for one node (`{ "oss": "mysql" }`); it must be one the pack lists for that role.
 - A custom block is `{ "role": "custom", "icon": "<line icon name>", "label": "..." }`.
+- `sim` (optional) on a node holds its capacity settings, and `sim` (optional) on an edge a traffic share or link latency
+  (section 13.2). Both are **known v1 fields**, so a v1 reader keeps them; a file without them opens and simulates with the
+  role defaults (section 13.3).
 - Never store view state (selection, measured sizes). Limits checked on open and on servers: 200 nodes, 400 edges, 40 zones,
   labels ≤ 60 characters, notes ≤ 500, file ≤ 256 KB. Unknown fields are dropped; an unknown role or a dangling edge makes
   the file invalid with a message that names it. Later versions only add fields; v1 files must always open.
@@ -181,8 +195,9 @@ A challenge is a scenario plus rules over roles, zones and edges, never over pos
   "rule": { "noEdge": { "from": "client", "to": "relational-db" } } }
 ```
 
-Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. A server (Python) is the judge; a TypeScript copy
-gives live hints. Both read one shared file of test cases.
+Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. Proposed: one TypeScript implementation runs in the
+browser (live hints) and in the checker service (the judge), so the two can never disagree (section 12, open decision 9).
+Behaviour checks that need the simulator are part of labs (section 14).
 
 ## 8. Integration: embed API and checker API
 
@@ -211,8 +226,12 @@ They meet through two small, versioned APIs; neither imports the other's code.
 
 ### 8.2 Checker API
 - `POST /v1/check` `{diagram, ruleset}` → `{valid, results: [{id, pass, points, message}], score, max}`; stateless.
-- Also a Python package (`archboard-check`) and a TypeScript module; one shared test file keeps them identical.
-- **The host's server is the judge**; a score sent from a browser is never trusted.
+- `POST /v1/check` `{diagram, lab}` (labs, section 14) also validates the diagram against the lab's budget and locks and
+  re-runs every lab scenario with the simulation engine and the lab's seeds; results carry the `engine` version.
+- Proposed: the checker service is a small Node service around the **same TypeScript packages** (rules and simulation) the
+  browser uses; hosts in any language (labsite is Flask) call it over HTTP. This replaces the earlier idea of a Python
+  `archboard-check` package, because a port would drift from the browser and students would dispute marks (open decision 9).
+- **The host's server is the judge**; a score or a simulation result sent from a browser is never trusted.
 
 ### 8.3 First host: the course lab site (work done in labsite, not here)
 A course page embeds the editor in learning mode, stores drafts and hand-ins, calls the checker, and sends the score
@@ -248,8 +267,9 @@ perspective. React Flow assumes rectangular nodes in screen space and would have
 painter's order and grid-axis routing. Pan and zoom: `d3-zoom`. Hit testing in ground cells, drag with snap, box select,
 connecting, routing and keyboard access are our code: **the largest cost of M1**. Export: SVG directly, PNG via a canvas.
 
-Code panel: CodeMirror 6 with a small grammar; auto-layout: elkjs in a Web Worker. Checker service: a small Python app around
-`archboard-check`, one container. Fonts bundled with `@fontsource` (JetBrains Mono, IBM Plex Sans). Icons from
+Code panel: CodeMirror 6 with a small grammar; auto-layout: elkjs in a Web Worker. Simulation engine: a pure TypeScript
+package with no DOM, run in a Web Worker in the browser (section 13.4). Checker service: a small Node app, one container,
+around the same rules and simulation packages (proposed, open decision 9). Fonts bundled with `@fontsource` (JetBrains Mono, IBM Plex Sans). Icons from
 `tools/fetch_icons.py`, cleaned through an allowlist before they are bundled.
 
 ## 11. Milestones
@@ -259,8 +279,9 @@ Code panel: CodeMirror 6 with a small grammar; auto-layout: elkjs in a Web Worke
 | M0 | Spec, design system, key screens, icon packs (this) | The instructor approves the look and the scope |
 | M1 | Editor core: 3D canvas, palette, zones, connections, inspector, packs, undo, files, templates, themes, responsive layout | Someone draws the 3-tier template from blank at 1280 × 720; the JSON round-trips; pack switching loses nothing |
 | M2 | Diagram as code with two-way sync, auto-layout, notes, flat view, export, accessibility pass | Text → canvas → text keeps the same diagram; section 9 passes |
-| M3 | Learning mode, rule engine (TS + Python), embed API, checker API | A test host page embeds the editor and gets a server-side score |
-| M4 | First host: labsite course page (work in labsite) | One real challenge used in class |
+| M3 | Learning mode, rule engine, embed API, checker API; first host (labsite course page, work done in labsite) | A host page embeds the editor and gets a server-side score; one real challenge used in class |
+| M4 | **Simulator** (section 13): Simulate mode, scenarios, engine in a Web Worker, results and verdict, capacity settings, scenario files | The design page's Screen E works on a real diagram at 1280 × 720; the same scenario gives the same numbers in the browser and in Node |
+| M5 | **Labs** (section 14): lab files, budget and locks, behaviour checks, server re-run through the checker API; labsite runs a lab | One real lab used in class, scored on the server |
 
 ## 12. Open decisions
 
@@ -271,8 +292,184 @@ Code panel: CodeMirror 6 with a small grammar; auto-layout: elkjs in a Web Worke
 5. Text syntax: approve the draft in section 4 before M2.
 6. AI first draft from a prompt: wanted, and who pays for the model calls?
 7. UI language: English only, or more languages later.
+8. Simulation engine model: **rate-based with a fixed 1 s step (proposed)**, or discrete-event (one request at a time: closer
+   p95, heavier, harder to keep identical across runtimes). Section 13.4.
+9. One engine for browser and server: **the same TypeScript packages in a Web Worker and in a Node checker service
+   (proposed)**, or a Python port for Python hosts. The proposal drops the earlier Python `archboard-check` package.
+10. The default numbers in the behaviour table (section 13.3): the instructor should review them so they feel right to
+    students, even though they are indicative.
+11. Lab budget: a total instance count (proposed for M5), or a cost model later?
+12. Scenario files: embed the diagram (one file to share) or reference it by title and hash? Both are allowed in the draft.
+13. Narration in step-through: role names only, or the active pack's product names (draft: product names, logic by role)?
 
 Decided by the instructor (2026-11-20): separate project; plan and design first; soft neo-brutalism with the reference
 site's look and 3D blocks; Eraser-like features; integration only through an API or plugin; small rounded edges on blocks;
 real product icons; **generic for any system architecture, not tied to AWS or one course**; built for 16:9 laptops
 (15.6") and monitors (22" and up).
+
+Decided by the instructor (simulator and labs): add a **simulator** after M3 that runs problem scenarios (load, block, zone
+and region failures, slow database, cache misses, queue backlog, link cut) with a step-through and narration, per-block
+capacity settings with role defaults so a diagram works with no settings, results on the canvas and in a panel, a plain
+verdict naming the bottleneck or single point of failure, and versioned scenario files. It is a **teaching model with
+indicative numbers**, pure code over the diagram JSON in a Web Worker, never a cloud emulator, never deploys anything,
+reads roles not products, adds only optional fields (v1 files still open), and works at 1280 × 720 with our tokens and both
+themes. **Labs** come after the simulator as a host add-on: brief, starting diagram, scenarios, behaviour checks; the host
+re-runs the simulation on its server through the checker API to score. Learning mode and labs stay add-ons; the core stays
+course-neutral.
+
+## 13. Simulation (v3, M4)
+
+Let anyone test whether a design holds up: run problem scenarios against the diagram and see whether its blocks, with
+their instances and capacity, cope. It is a **teaching model with indicative numbers**, never a cloud emulator: it never
+deploys anything and never touches an account. It reads roles, zones and edges, never products, so every icon pack gives
+the same result. Design page: Screen E.
+
+### 13.1 What the user does
+
+- **Simulate mode** (top bar switch: Design / Simulate). Left: the scenario panel. Right: results. Bottom of the canvas:
+  run controls and a timeline. Run is the one primary button in this mode.
+- **Scenarios**, picked from presets and combined on one timeline, each with a few fields:
+  steady load (requests per second), traffic spike (from, to, at), block fails (which, at), zone goes down, region goes down,
+  slow database (latency and capacity factors), cache misses (hit rate), queue backlog (producer burst or slower consumers),
+  network link cut (which connection, at). Each can end with a recovery.
+- **Run** plays the scenario (default 5 simulated minutes) at ×1, ×10 or ×60; pause, scrub and reset.
+  **Step** sends one request through the system as it is at the paused moment, hop by hop, with a narration panel
+  ("web-lb sends the request to app-1, because zone-b is down"), like the lessons on designed-to-scale.
+- **On the canvas** (all from the same numbers as the results panel):
+  - each block fills from the bottom with its utilisation: ok below 70%, warn from 70%, bad at 100% and over; warn and bad
+    blocks get a status pill (word + icon + colour: "Busy 83%", "Over capacity 200%");
+  - moving dots on the connections show traffic, more dots for more traffic (static dots when reduced motion is on);
+    connection labels show the rate;
+  - failed blocks and zones look switched off (grey, dashed outline); a failed zone's tab says "down";
+  - connections into something switched off are drawn dashed in the error colour, with no dots.
+- **Results panel**: throughput (served of offered requests per second), error rate, p95 latency, longest queue, users
+  served (yes or no), what happened when, and a verdict: **Handles it** or **Breaks**, naming the bottleneck or single point
+  of failure, with one hint. The panel says "Teaching model: indicative numbers".
+- **Capacity settings** in the inspector (Simulate mode): optional per block; an empty field shows the role default in grey.
+- **Scenario files** can be saved, shared and replayed.
+
+### 13.2 Format additions
+
+Node `sim` (optional; a known field of diagram format v1):
+
+```json
+{ "id": "n3", "role": "service", "label": "app-1", "zone": "z2", "x": 8, "y": 2.3,
+  "sim": { "instances": 2, "capacity": 500, "latency": 25,
+           "autoscale": { "min": 2, "max": 6, "threshold": 0.7, "warmup": 60 } } }
+```
+
+| Field | Meaning | Applies to |
+|---|---|---|
+| `instances` | number of copies (0 to 1,000) | all |
+| `capacity` | requests per second one instance handles | all |
+| `latency` | milliseconds per call at low load | all |
+| `hitRate` | share answered without going further (0 to 1) | cache, CDN |
+| `queueSize` | messages held before new ones are rejected | queue, pub/sub, stream |
+| `autoscale` | `min`, `max` instances, `threshold` utilisation (0 to 1), `warmup` seconds | compute roles |
+
+Edge `sim` (optional): `share` (fraction of the source's requests that take this connection, instead of every request calling
+it) and `latency` (network milliseconds). Any missing value takes the role default (13.3).
+
+Scenario file (its own format and version):
+
+```json
+{
+  "format": "archboard-scenario", "version": 1,
+  "title": "Spike, then zone-b goes down",
+  "for": { "title": "Online shop", "hash": "sha256:…" },
+  "duration": 300, "seed": 7,
+  "load": [ { "from": "n1", "rps": [[0, 200], [60, 2000]] } ],
+  "events": [
+    { "at": 120, "type": "fail", "zone": "z3" },
+    { "at": 150, "type": "slow", "role": "relational-db", "latency": 4, "capacity": 0.5 },
+    { "at": 0,   "type": "hit-rate", "node": "n6", "value": 0.2 },
+    { "at": 180, "type": "backlog", "node": "n8", "consumers": 0.3 },
+    { "at": 200, "type": "cut", "edge": "e5" },
+    { "at": 240, "type": "recover", "zone": "z3" }
+  ],
+  "expect": { "errorRate": 0.01, "p95": 500 }
+}
+```
+
+- Event types: `fail`, `recover`, `slow`, `hit-rate`, `backlog`, `cut`; load changes live in `load`. A region going down is
+  `fail` on a zone of kind `region`.
+- A target is one `node`, `zone` or `edge` id, or a `role` (every block with that role). An unknown id makes the scenario
+  invalid with a message that names it.
+- A scenario either names the diagram it was written for (`for`) or embeds it (`diagram`) to be shared as one file.
+- Limits: duration up to 3,600 s, 50 events, 20 load series.
+
+### 13.3 Behaviour table (role defaults, indicative)
+
+| Category, roles | Default per block | Behaviour |
+|---|---|---|
+| Client: users, mobile app, device, external system | none | Traffic sources: send the scenario's load along their request connections. A request counts as served when its whole chain of calls succeeds. |
+| Network: load balancer | 1 × 20,000 req/s, 1 ms | Splits requests evenly across its healthy targets; stops sending to failed ones. |
+| Network: DNS, CDN, API gateway, web firewall, NAT | 1 × 10,000 to 50,000 req/s, 1 to 5 ms | Pass requests through. CDN answers `hitRate` (default 0.6) itself. |
+| Compute: service, virtual machine, containers, Kubernetes, web front end, batch job | 2 × 500 req/s (VM: 1 × 300), 25 ms | Every request calls each request dependency once (fan-out), unless an edge has a `share`. Autoscaling if set. |
+| Compute: function | scales 0 to 1,000 × 10 req/s, 30 ms, +300 ms on cold start | Autoscaling on by default. |
+| Database: relational | 1 × 1,000 req/s, 5 ms | One instance unless set: the usual bottleneck and single point of failure. |
+| Database: NoSQL, search index, data warehouse | 1 × 5,000 / 500 / 50 req/s, 3 / 20 / 500 ms | As above. |
+| Database: cache | 1 × 20,000 req/s, 1 ms, hit rate 0.8 | Cache-aside: when a block calls a cache and a database, the database gets only the misses. |
+| Storage: object; block, file | object 1 × 5,000 req/s, 20 ms; block and file 1 × 2,000 req/s, 2 ms | As above. |
+| Messaging: queue, pub/sub, event stream | 10,000 req/s in, queue size 100,000, 5 ms | Async connections fill the queue; the consuming blocks drain it at their capacity; the backlog is the queue length; a full queue rejects. |
+| Observability, security | 1 × 1,000 req/s, 5 ms | On the request path only where drawn there. |
+
+### 13.4 Engine (proposed)
+
+- **Rate-based with a fixed 1 s step** over the scenario. Each tick: apply the events; push request rates from the sources
+  along request connections, in id order; cap each block at instances × capacity, and the excess fails; fill and drain
+  queues; run autoscaling (above the threshold for 30 s, then the warm-up); compute latency per call as
+  latency ÷ (1 − min(utilisation, 0.95)) plus the connection latency. p95 is approximated as twice the mean latency of the
+  slowest served chain, and the UI calls it indicative.
+- **Routing:** clients are the sources. A load balancer splits across healthy targets; every other block fans out to each
+  request dependency (or by `share`); cache-aside sends only misses to the database; async connections feed queues; data
+  connections carry no user traffic. A failed block has capacity 0. A failed zone switches off every block inside it,
+  nested zones included; blocks drawn outside it survive. A cycle of request connections is an error. A block no client
+  reaches stays idle.
+- **Verdict:** "Handles it" when the error rate is under `expect.errorRate` (default 1%), p95 is under `expect.p95` (default
+  1,000 ms) and no queue grew over the last 30 s; otherwise "Breaks". The bottleneck is the busiest block on a served path at
+  100% or more. A single point of failure is a block or zone whose failure alone drops users served below the threshold; the
+  editor also flags it without running (one instance, no sibling behind the same balancer). One hint per cause: overloaded,
+  add instances or autoscaling; single point of failure, a second zone or a standby; database overloaded, a cache or a read
+  replica; queue growing, more consumers; link cut, a second path.
+- **Step-through** traces one request through the state at the paused tick: the load balancer picks the next healthy target
+  in turn, a cache hit or miss comes from the seeded random generator, and the narration is built from roles (shown with the
+  active pack's names).
+- **Deterministic:** blocks and connections processed in id order, a seeded random generator only (no `Math.random`, no
+  clock), values rounded each tick, and every result carries the `engine` version. The same TypeScript package runs in a
+  Web Worker in the browser and in Node in the checker service; the server's result is the one that counts.
+- Not chosen yet: a discrete-event model (open decision 8).
+- Speed: a 50-block diagram and a 300 s scenario in under 1 s on a classroom laptop, off the main thread.
+
+## 14. Labs (v4, M5, host add-on)
+
+Students play in the simulator and learn from scenarios. Like learning mode, labs are an add-on a host turns on; the core
+editor stays course-neutral. A lab is a brief, a starting diagram, scenarios to survive and checks.
+
+```json
+{
+  "format": "archboard-lab", "version": 1, "id": "survive-a-zone",
+  "title": "Survive a zone outage",
+  "brief": "The shop must keep serving customers when one failure zone goes down…",
+  "start": { "format": "archboard", "version": 1, "…": "the starting diagram" },
+  "budget": { "instances": 12 },
+  "locked": ["capacity", "latency", "hitRate"],
+  "scenarios": [ { "id": "peak", "…": "scenario" }, { "id": "zone-down", "…": "scenario" } ],
+  "checks": [
+    { "id": "c1", "points": 3, "text": "Still serves users after one zone fails", "scenario": "zone-down", "expect": { "served": true } },
+    { "id": "c2", "points": 2, "text": "p95 under 200 ms at 1,000 requests per second", "scenario": "peak", "expect": { "p95": 200 } },
+    { "id": "c3", "points": 1, "text": "The database is not in a public subnet",
+      "rule": { "placement": { "role": "relational-db", "notIn": { "kind": "subnet", "access": "public" } } } }
+  ]
+}
+```
+
+- **Behaviour checks** name a scenario and what must hold (`served`, `p95`, `errorRate`, `maxQueue`); structure checks reuse
+  the rule engine (section 7).
+- **No passing by typing big numbers:** per-instance capacity, latency and hit rate come from the role defaults and are
+  locked in labs; students change the structure, instances and autoscaling, within a budget (total instances for M5).
+- **Student view:** the brief, the scenarios with Run and Step, the checks with live (indicative) results. Hand in belongs
+  to the host.
+- **Scoring:** the host calls `POST /v1/check {diagram, lab}`. The checker service validates the diagram against the lab
+  (budget, locks), re-runs every scenario with the same engine and seeds, and returns per-check results and a score. The
+  host never trusts a result from the browser.

@@ -1,7 +1,9 @@
 # System design editor
 
 Design the architecture of any system as 3D blocks on a grid, or type it as text. Show the same diagram as generic roles,
-as AWS services or as open-source projects: the diagram stays the same, only names and icons change. Free for anyone;
+as AWS services or as open-source projects: the diagram stays the same, only names and icons change. A simulator runs
+traffic spikes, failures and slow parts against the design and says plainly whether it holds up (a teaching model with
+indicative numbers, not a cloud emulator). Free for anyone;
 built first for the Cloud Computing course at the Institute of Technology of Cambodia, which embeds it with an optional
 learning mode.
 
