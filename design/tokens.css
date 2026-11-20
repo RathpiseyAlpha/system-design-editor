@@ -1,0 +1,120 @@
+/* System design editor: design tokens. The one source of colours, type, sizes, shadows and motion.
+   Direction: soft neo-brutalism on drafting paper, with a 3D (isometric) canvas, after the look of
+   designed-to-scale.vercel.app (warm paper, ink outlines, hard offset shadows, mono type, a green highlighter for
+   "active", isometric blocks on a faint diagonal grid). Every value here is our own.
+   Light by default; dark via data-theme="dark" on <html>, or the OS setting when no data-theme is set. */
+
+:root {
+  /* Ground and ink */
+  --paper: #F3ECE1;        /* page and canvas */
+  --sheet: #FAF6EF;        /* panels, inputs, chips */
+  --sunken: #EAE2D5;       /* wells, code panel */
+  --ink: #1E1B17;          /* text and outlines */
+  --muted: #6B655B;        /* secondary text (5.1:1 on paper) */
+  --line: #DCD3C5;         /* hairlines inside panels */
+  --grid: #E1D7C7;         /* isometric canvas grid */
+  --edge: #1E1B17;         /* outline of anything you can touch */
+  --drop: #1E1B17;         /* hard shadow colour */
+  --shade: #3A2C1C;        /* mixed into block side faces */
+  --light: #FFFFFF;        /* mixed into block top faces */
+
+  /* The highlighter: active tab, primary action, selection, focus */
+  --marker: #B3DA92;       /* fill behind ink text */
+  --marker-ink: #1E1B17;
+  --marker-strong: #3C8A47;/* selection ring, focus ring, links */
+  --marker-soft: #E4F1D6;
+
+  /* Status: always word + icon + colour */
+  --ok: #23703F;   --ok-soft: #DCEFD8;
+  --warn: #8F4E05; --warn-soft: #F8E2BF;
+  --bad: #B3261E;  --bad-soft: #F7D7D2;
+  --port: #E0703A;         /* connection ports on blocks */
+
+  /* Service categories: the base colour of a block's left face. Top and right faces are mixed from it. */
+  --cat-client: #E6DED0;
+  --cat-network: #F4B98C;
+  --cat-compute: #A9C5EB;
+  --cat-storage: #B8DA9B;
+  --cat-database: #C6B8EC;
+  --cat-messaging: #F1B2C2;
+  --cat-observe: #EED98F;
+  --cat-security: #A2D8CC;
+
+  /* Zones: floor plates on the canvas */
+  --zone-vpc: #E7EEF8;
+  --zone-public: #EEF5E3;
+  --zone-private: #F2EAF5;
+  --zone-region: #F7F1E7;
+
+  --top-mix: 52%;          /* how much of --light goes into a top face */
+  --side-mix: 18%;         /* how much of --shade goes into a right face */
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1B1916; --sheet: #24211D; --sunken: #2D2924; --ink: #F1EAE0; --muted: #ACA396; --line: #3A352E; --grid: #2C2823;
+    --edge: #D8CFC1; --drop: #050403; --shade: #000000; --light: #FFFFFF;
+    --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C;
+    --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55;
+    --cat-client: #4A443B; --cat-network: #7A4E2E; --cat-compute: #34507A; --cat-storage: #3F5C2E; --cat-database: #4D4078;
+    --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55;
+    --zone-vpc: #1F2631; --zone-public: #232B1D; --zone-private: #2B2331; --zone-region: #24211C;
+    --top-mix: 22%; --side-mix: 30%;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1B1916; --sheet: #24211D; --sunken: #2D2924; --ink: #F1EAE0; --muted: #ACA396; --line: #3A352E; --grid: #2C2823;
+  --edge: #D8CFC1; --drop: #050403; --shade: #000000; --light: #FFFFFF;
+  --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C;
+  --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55;
+  --cat-client: #4A443B; --cat-network: #7A4E2E; --cat-compute: #34507A; --cat-storage: #3F5C2E; --cat-database: #4D4078;
+  --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55;
+  --zone-vpc: #1F2631; --zone-public: #232B1D; --zone-private: #2B2331; --zone-region: #24211C;
+  --top-mix: 22%; --side-mix: 30%;
+  color-scheme: dark;
+}
+
+/* Shape, type, space, motion (theme independent) */
+:root {
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;   /* the interface, labels, code */
+  --font-prose: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;         /* long text only: notes, briefs */
+
+  /* Type scale (size/line-height). Mono runs wide, so sizes are a step smaller than a sans UI. Nothing under 12px. */
+  --t-hint: 400 12px/16px var(--font-mono);
+  --t-small: 400 13px/18px var(--font-mono);
+  --t-ui: 500 13px/20px var(--font-mono);
+  --t-body: 400 16px/26px var(--font-prose);
+  --t-h3: 700 16px/22px var(--font-mono);
+  --t-h2: 700 22px/28px var(--font-mono);
+  --t-h1: 800 32px/38px var(--font-mono);
+  --t-block: 700 14px/17px var(--font-mono);     /* name on a block */
+  --t-block-sub: 500 12px/15px var(--font-mono); /* product on a block */
+  --t-code: 400 13px/22px var(--font-mono);
+
+  /* Space: 4 8 12 16 24 32 48 */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+
+  /* Isometric canvas: one grid cell is --cell on the ground; it projects to --iso-x across and --iso-y down. */
+  --cell: 40px; --iso-x: 34.64px; --iso-y: 20px;
+  --block-h: 46px;     /* height of a service block */
+  --plate-h: 8px;      /* thickness of a zone floor plate */
+
+  /* Outlines and corners */
+  --bw: 2px; --bw-block: 2.25px; --bw-fine: 1.5px;
+  --r-chip: 999px; --r-control: 8px; --r-panel: 14px;
+
+  /* Hard offset shadows (no blur). Hover lifts, press sinks into place. */
+  --pop-sm: 2px 2px 0 var(--drop);
+  --pop: 3px 3px 0 var(--drop);
+  --pop-lg: 5px 5px 0 var(--drop);
+  --lift: translate(-1px, -1px);
+
+  /* Layout */
+  --topbar-h: 56px; --palette-w: 264px; --inspector-w: 320px; --code-w: 400px; --statusbar-h: 32px;
+
+  /* Motion */
+  --dur-press: 90ms; --dur-ui: 160ms; --dur-layout: 260ms; --ease: cubic-bezier(.2, .8, .2, 1);
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-press: 0ms; --dur-ui: 0ms; --dur-layout: 0ms; } }
