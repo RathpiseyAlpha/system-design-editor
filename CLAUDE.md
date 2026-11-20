@@ -7,7 +7,10 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 done (2026-11-21); M2 next.** The editor core works: engine package (format, roles, six templates); 3D canvas with
+**M1 done (2026-11-21); M2 built (2026-11-21), its accessibility pass and speed checks still open.** M2 added: diagram as
+code (Split and Code views, CodeMirror, two-way sync, errors on their line, `packages/engine/src/text.ts`); Auto-layout with ELK
+in a Web Worker (`layout/`); the flat top-down view (`Projection` in `canvas/geometry.ts`); Markdown notes beside the text
+(`notes/`); Present mode (`present/`); the read-only embed `/embed/?mode=view&origin=…` (`embed/`, decision 32). The editor core works: engine package (format, roles, six templates); 3D canvas with
 pan and zoom, rotate view, label placement; editing blocks (drag with snap, arrow keys, palette by click, search or drag,
 delete, undo and redo, autosave, New from a template, Open, Save); zones (add, move by the tab with their contents,
 resize, nest, edit); connections (draw from a port or with Connect to, select, kind and label); inspector for all three;
@@ -112,4 +115,9 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
   preview afterwards. Add a check there for every new interaction.
 - Layout check (sizes of SPEC section 9, light and dark, plus a contact sheet to look at):
   `python tools/check_layout.py http://localhost:4319/ sheet.png`. Rotating, routing and label placement are pure
-  functions in `canvas/geometry.ts` (tested); membership of zones follows position (`state/ops.ts` `reassign`).
+  functions in `canvas/geometry.ts` (tested); membership of zones follows position (`state/ops.ts` `reassign`). It also covers
+  the flat view, the notes panel and the Present bar.
+- Embed check (a stand-in host page on a second origin, both frames, postMessage both ways):
+  `python -I tools/check_embed.py` with the preview on 4319 (it serves `tools/` on port 8765 itself).
+- Anything a host or a file sends is untrusted: it goes through `readHostMessage` / `parseDiagramText`; notes are drawn from a
+  parsed tree, never as HTML; links only for https.

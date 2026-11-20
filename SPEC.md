@@ -1,6 +1,8 @@
 # Archboard — product spec
 
-Status: **M1 done** (2026-11-21): the editor core is built and checked; M2 is next. "Archboard" is a working name.
+Status: **M1 done** (2026-11-21); **M2 built** (2026-11-21): diagram as code, auto-layout, flat view, notes, Present mode
+and the read-only embed are built and checked. The accessibility pass and section 9's speed targets are not yet checked, so
+M2's "done when" is not yet met; M3 comes after them. "Archboard" is a working name.
 
 ## 1. What it is
 
@@ -222,6 +224,10 @@ They meet through two small, versioned APIs; neither imports the other's code.
   declared host origin and accepted only from it.
   - host → editor: `load {diagram, readOnly, show?, packs?, brief?, rules?}`, `setTheme`, `requestSave`.
   - editor → host: `ready`, `change {diagram, dirty}` (debounced), `save {diagram}`, `submit {diagram}`, `hints {results}`.
+- Built in M2 (decision 32): `mode=view` only, at `/embed/` (a second page of the same app). The origin must be https, or
+  http on localhost for development. host → editor: `load {diagram, show?}` (the diagram as an object or its text; same
+  size limit and schema as an opened file), `setTheme {theme}`. editor → host: `ready {mode}`, `loaded {title, nodes, edges,
+  zones}`, `error {errors}` (a refused message; what is shown stays). `tools/embed-host.html` is a stand-in host.
 - A host may limit the packs offered (`packs: ["generic", "oss"]`).
 - Optional JS mount for same-origin hosts: `Archboard.mount(element, {diagram, mode, onChange, onSubmit})`.
 - The editor never calls a host's server and never sees a person's identity.
@@ -367,6 +373,10 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 26 | **Text merges into the file by name.** Blocks the text still names keep their id, position, notes, capacity settings and other packs' products; new names are new blocks; missing names are removed (a rename is a removal plus an addition). Connections match by their two ends. The text decides what is inside what: blocks and zones are moved into the zone the text puts them in, and zones grow to hold their contents, so the canvas and the nesting agree. | The text never loses what it cannot say, and the canvas never contradicts the text. |
 | 27 | **The canvas rewrites the text**, so comments in the text are lost when something is changed on the canvas. Notes and capacity settings live only in the file and the panels, not in the text. | Two-way sync with a simple printer; comments are rare in short diagrams. |
 | 28 | **New blocks from text are placed by a fixed rule** (inside their zone at the first free spot, else next to a block they connect to), not by ELK; ELK runs only when Auto-layout is pressed. | Typing must not rearrange the user's diagram; the rule is instant and deterministic. |
+| 29 | **The flat view is a look, not a layout**: a 3D / Flat switch on the canvas (it works in Split too), view-only like Rotate view. Seen from above a cell is 44 px; blocks are cards the size of their footprint with a hard shadow (discs for stores, dark servers with three status lights), names under the card; zones are rounded areas with their tab on the border. A connection that enters or leaves a card vertically stops below the name. The top bar's "3D" became "Canvas". | One file, two looks; Split keeps whichever look was chosen. |
+| 30 | **Notes sit beside the text**: the side panel in Split and Code has two tabs, Text and Notes. Notes are Markdown (headings, lists, quotes, fenced code, inline code, bold, italic, https links only), drawn from a parsed tree as React elements; nothing in a note is ever read as HTML. Typing is one undo step. | A wide place to write; files from anyone are safe to open. |
+| 31 | **Present mode** shows only the canvas (full screen when the browser allows): the whole diagram first, then each zone in reading order (outer zones first). Arrows, Space, Page Up/Down, Home, End step; Esc exits. The view glides 0.42 s (instantly with reduced motion), zooms to at most 160 % and keeps room for the bar. Nothing can be changed while presenting. | Teaching from the diagram without the editor's chrome; zones are the natural chapters. |
+| 32 | **The embed's first version is view-only** (`/embed/?mode=view&origin=…`). It listens only to its parent window at the declared origin and posts only there, never reads or writes the editor's autosave, does not save the host's theme, and answers `loaded` and `error` (added to section 8.1). Edit and learning modes come with M3. Hosting it (for example on GitHub Pages) is left to the instructor. | Hosts can show diagrams now; nothing a host sends can change the user's own work. |
 
 Also decided by the instructor (2026-11-20): **AWS icons get rounded corners** to match the stickers (they fill the sticker and
 are clipped to its corner radius, as are the AWS zone icons in tabs). AWS's icon guidelines ask that icons not be cropped;
