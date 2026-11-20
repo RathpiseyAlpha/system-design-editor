@@ -41,6 +41,10 @@
   --cat-observe: #EED98F;
   --cat-security: #A2D8CC;
 
+  /* Rack servers (virtual machines, autoscaling groups): a dark navy body with light text and rack lines */
+  --server: #2C3E66;
+  --server-ink: #F3EEE6;
+
   /* Zones: floor plates on the canvas */
   --zone-vpc: #E7EEF8;
   --zone-public: #EEF5E3;
@@ -59,7 +63,7 @@
     --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C;
     --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55;
     --cat-client: #4A443B; --cat-network: #7A4E2E; --cat-compute: #34507A; --cat-storage: #3F5C2E; --cat-database: #4D4078;
-    --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55;
+    --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55; --server: #3A5182; --server-ink: #F3EEE6;
     --zone-vpc: #1F2631; --zone-public: #232B1D; --zone-private: #2B2331; --zone-region: #24211C;
     --top-mix: 22%; --side-mix: 30%;
     color-scheme: dark;
@@ -71,7 +75,7 @@
   --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C;
   --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55;
   --cat-client: #4A443B; --cat-network: #7A4E2E; --cat-compute: #34507A; --cat-storage: #3F5C2E; --cat-database: #4D4078;
-  --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55;
+  --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55; --server: #3A5182; --server-ink: #F3EEE6;
   --zone-vpc: #1F2631; --zone-public: #232B1D; --zone-private: #2B2331; --zone-region: #24211C;
   --top-mix: 22%; --side-mix: 30%;
   color-scheme: dark;

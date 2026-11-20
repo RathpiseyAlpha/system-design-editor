@@ -133,8 +133,8 @@ export const Block = memo(function Block({ node: n, pack, selected, onPointerDow
   const plateB = plate && !isCyl(sh) ? 2 * sh.s * IY : 0;
   return (
     <g
-      className="blk"
-      style={cssVar('--c', `var(--cat-${r.category})`)}
+      className={`blk${r.shape === 'server' ? ' server' : ''}`}
+      style={cssVar('--c', r.shape === 'server' ? 'var(--server)' : `var(--cat-${r.category})`)}
       data-block={n.id}
       tabIndex={0}
       role="button"

@@ -117,6 +117,12 @@ svg.iso text, svg.solo text, svg.zones-demo text { font-family: var(--font-mono)
 .blk .led { fill: var(--ok); stroke: var(--edge); stroke-width: .9; }
 .blk .bay { fill: none; stroke: var(--edge); stroke-width: 3; stroke-linecap: round; opacity: .5; }
 .blk .vent { fill: none; stroke: var(--edge); stroke-width: 1.4; stroke-linecap: round; opacity: .55; }
+/* Rack servers have their own dark body (tokens.css --server): light text and light rack lines on it */
+.blk.server .name { fill: var(--server-ink); }
+.blk.server .sub { fill: color-mix(in srgb, var(--server-ink) 78%, var(--c)); }
+.blk.server .groove { stroke: var(--server-ink); opacity: .45; }
+.blk.server .bay, .blk.server .vent { stroke: var(--server-ink); opacity: .55; }
+.blk.server .led { fill: var(--ok); stroke: var(--server-ink); stroke-width: .8; }
 .stk { fill: var(--sticker); stroke: var(--sticker-edge); stroke-width: 1.5; }
 .stk-sh { fill: var(--drop); }
 .stk-ring { fill: none; stroke: var(--sticker-edge); stroke-width: 1.5; }
@@ -476,6 +482,7 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
           <div class="swatch"><i style="background:var(--ink)"></i><span><b>--ink</b>text, outlines</span></div>
           <div class="swatch"><i style="background:var(--grid)"></i><span><b>--grid</b>canvas grid</span></div>
           <div class="swatch"><i style="background:var(--sticker)"></i><span><b>--sticker</b>icon label, both themes</span></div>
+          <div class="swatch"><i style="background:var(--server)"></i><span><b>--server</b>rack server body</span></div>
           <div class="swatch"><i style="background:var(--marker)"></i><span><b>--marker</b>active, primary</span></div>
           <div class="swatch"><i style="background:var(--marker-strong)"></i><span><b>--marker-strong</b>selection, focus</span></div>
           <div class="swatch"><i style="background:var(--port)"></i><span><b>--port</b>connection ports</span></div>
@@ -1003,7 +1010,8 @@ function blockSVG(n, o = {}) {
   const hf = util == null ? 0 : H * Math.min(util, 1);
   if (st === 'bad') o = { ...o, badge: { text: `Over capacity ${Math.round(util * 100)}%`, kind: 'bad', sym: 'alert' } };
   else if (st === 'warn') o = { ...o, badge: { text: `Busy ${Math.round(util * 100)}%`, kind: 'warn', sym: 'gauge' } };
-  let g = `<g class="blk${o.off ? ' off' : ''}" style="--c:var(--cat-${r.category})">`, labelY, ports, flagAt, topY;
+  const srv = r.shape === 'server';
+  let g = `<g class="blk${srv ? ' server' : ''}${o.off ? ' off' : ''}" style="--c:var(${srv ? '--server' : `--cat-${r.category}`})">`, labelY, ports, flagAt, topY;
   if (r.shape === 'cyl') {
     const rx = Math.SQRT2 * sh.r * IX, ry = Math.SQRT2 * sh.r * IY;
     if (o.raise) g += `<ellipse class="ground" cx="${f(cx)}" cy="${f(gy0)}" rx="${f(rx)}" ry="${f(ry)}"/>`;

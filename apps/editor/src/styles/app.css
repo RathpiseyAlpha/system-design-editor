@@ -110,6 +110,12 @@ svg.iso text { font-family: var(--font-mono); fill: var(--ink); }
 .blk .led { fill: var(--ok); stroke: var(--edge); stroke-width: .9; }
 .blk .bay { fill: none; stroke: var(--edge); stroke-width: 3; stroke-linecap: round; opacity: .5; }
 .blk .vent { fill: none; stroke: var(--edge); stroke-width: 1.4; stroke-linecap: round; opacity: .55; }
+/* Rack servers have their own dark body (tokens.css --server): light text and light rack lines on it */
+.blk.server .name { fill: var(--server-ink); }
+.blk.server .sub { fill: color-mix(in srgb, var(--server-ink) 78%, var(--c)); }
+.blk.server .groove { stroke: var(--server-ink); opacity: .45; }
+.blk.server .bay, .blk.server .vent { stroke: var(--server-ink); opacity: .55; }
+.blk.server .led { fill: var(--ok); stroke: var(--server-ink); stroke-width: .8; }
 .stk { fill: var(--sticker); stroke: var(--sticker-edge); stroke-width: 1.5; }
 .stk-sh { fill: var(--drop); }
 .stk-ring { fill: none; stroke: var(--sticker-edge); stroke-width: 1.5; }
