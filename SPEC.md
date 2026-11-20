@@ -44,7 +44,7 @@ knowing a vendor's name? do they read zones as containers? do they find and use 
 3. **3D that explains.** Shape is the kind (box runs code, cylinder keeps data, low box stores files, plate is people or
    devices outside the system); colour is the category; the sticker on top is the product. A flat view is one click away.
 4. **Real icons, shown as they are.** Official AWS icons and project logos sit upright on a light sticker, never redrawn,
-   recoloured, cropped or skewed.
+   recoloured or skewed. AWS icons fill their sticker and take its rounded corners (instructor's decision, section 12).
 5. **Never stuck.** No blocking dialogs; everything can be undone; the diagram autosaves.
 6. **The diagram is the document.** One small, readable JSON format (section 6) that people, checkers and git can read.
 7. **Fits the screen people have.** Designed at 1280 × 720 first and grows to large monitors (section 9).
@@ -130,7 +130,7 @@ topic, event stream, monitoring, logs, identity, secrets.
 | Pack | Shows | Source and terms |
 |---|---|---|
 | Generic | Role name and our line icon | Ours |
-| AWS | The AWS product and its official icon (28 services, 5 zone icons) | AWS Architecture Icons, release 2026-07-31. AWS: "We allow customers and partners to use these toolkits and assets to create architecture diagrams." Shown unmodified. |
+| AWS | The AWS product and its official icon (28 services, 5 zone icons) | AWS Architecture Icons, release 2026-07-31. AWS: "We allow customers and partners to use these toolkits and assets to create architecture diagrams." Shown upright and uncoloured; corners rounded to match the stickers (section 12). |
 | Open source | Projects under OSI-approved licences, with their logos (29 logos) | Logos from gilbarbara/logos (CC0, pinned commit), Simple Icons 16.38.0 (CC0) and cncf/artwork (CoreDNS, Linux Foundation trademark policy). Project licences read from each repository on 2026-11-20. |
 
 Left out of the Open source pack (licence not OSI-approved, read 2026-11-20): HashiCorp Nomad and Vault (BSL 1.1),
@@ -359,6 +359,10 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 18 | **Connections are routed automatically**; the file stores no bends. | Keeps the file clean and the text view simple; hand-drawn bends can be added later as an optional field. |
 | 19 | **Roles and zone kinds have one source**, `packages/engine/src/roles.json`; `tools/fetch_icons.py` reads it, and a test fails if the manifest differs. | One list, so the engine, the packs and the editor cannot disagree. |
 | 20 | **The flat view moves to M2**; M1 is the 3D view only. | M1 is already the largest milestone. |
+
+Also decided by the instructor (2026-11-20): **AWS icons get rounded corners** to match the stickers (they fill the sticker and
+are clipped to its corner radius, as are the AWS zone icons in tabs). AWS's icon guidelines ask that icons not be cropped;
+this trims a few pixels of each icon's background square. Reverse it by drawing the icon inset in the sticker again.
 
 ### Still open (for the instructor)
 

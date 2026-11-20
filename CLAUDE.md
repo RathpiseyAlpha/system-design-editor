@@ -73,7 +73,8 @@ Next is M1 (SPEC section 11): the repository layout and stack of SPEC section 10
 - Layout rules are **container queries on the editor's own size** (it can be embedded); check every screen change at
   1280 × 720, 1366 × 768, 1536 × 864 and 1920 × 1080 (the size switcher on Screen A of the design page does this).
 - **Icons:** only through `tools/fetch_icons.py` (pinned sources, allowlist cleaning, licence recorded). Show AWS icons and
-  logos unmodified on the light sticker (`--sticker`): never redraw, recolour, crop or skew them. A product goes in the
+  logos upright on the light sticker (`--sticker`): never redraw, recolour or skew them. AWS icons fill the sticker and are
+  clipped to its rounded corners (instructor's decision, SPEC section 12); logos sit inset, uncropped. A product goes in the
   Open source pack only if its licence is OSI-approved, read from its own repository. `design/icons/aws/` is git-ignored:
   AWS icon files are fetched at build time and never committed (SPEC section 12, decision 6).
 - The checker service treats every request as untrusted: zod schema and size limits, rules and simulations in a

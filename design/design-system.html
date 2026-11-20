@@ -86,10 +86,11 @@ textarea.input { font: 400 14px/21px var(--font-prose); }
 .ico { width: 32px; height: 32px; flex: none; display: inline-grid; place-items: center; border: var(--bw-fine) solid var(--sticker-edge); border-radius: 8px;
   background: var(--sticker); color: var(--sticker-ink); box-shadow: 1.5px 1.5px 0 var(--drop); }
 .ico img { width: 22px; height: 22px; object-fit: contain; display: block; }
-.ico.aws img { width: 26px; height: 26px; }
+.ico { overflow: hidden; }
+.ico.aws img { width: 100%; height: 100%; object-fit: cover; }   /* AWS icons fill the sticker and take its rounded corners */
 .ico svg { width: 18px; height: 18px; }
 .ico--lg { width: 44px; height: 44px; border-radius: 10px; border-width: var(--bw); }
-.ico--lg img { width: 30px; height: 30px; } .ico--lg.aws img { width: 36px; height: 36px; } .ico--lg svg { width: 24px; height: 24px; }
+.ico--lg img { width: 30px; height: 30px; } .ico--lg.aws img { width: 100%; height: 100%; } .ico--lg svg { width: 24px; height: 24px; }
 
 .pal-item { display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: center; padding: 4px 8px; border-radius: var(--r-control); border: var(--bw-fine) solid transparent; cursor: grab; min-width: 0; }
 .pal-item:hover, .pal-item.is-hover { border-color: var(--edge); background: var(--paper); box-shadow: var(--pop-sm); }
@@ -114,6 +115,7 @@ svg.iso text, svg.solo text, svg.zones-demo text { font-family: var(--font-mono)
 .blk .sub { font: var(--t-block-sub); fill: color-mix(in srgb, var(--ink) 78%, var(--c)); }
 .stk { fill: var(--sticker); stroke: var(--sticker-edge); stroke-width: 1.5; }
 .stk-sh { fill: var(--drop); }
+.stk-ring { fill: none; stroke: var(--sticker-edge); stroke-width: 1.5; }
 .stk-line { color: var(--sticker-ink); }
 .port { fill: var(--port); stroke: var(--edge); stroke-width: 1.5; }
 .flag circle { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.75; }
@@ -179,7 +181,7 @@ svg.iso text, svg.solo text, svg.zones-demo text { font-family: var(--font-mono)
 .products > div { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; }
 .products > div + div { border-top: var(--bw-fine) solid var(--line); }
 .products .ico { width: 28px; height: 28px; box-shadow: none; }
-.products .ico img { width: 19px; height: 19px; } .products .ico.aws img { width: 24px; height: 24px; } .products .ico svg { width: 15px; height: 15px; }
+.products .ico img { width: 19px; height: 19px; } .products .ico.aws img { width: 100%; height: 100%; } .products .ico svg { width: 15px; height: 15px; }
 .products small { display: block; font: var(--t-hint); color: var(--muted); }
 .products b { font: 700 12px/16px var(--font-mono); }
 .products .on { background: var(--marker-soft); }
@@ -954,7 +956,7 @@ function pill(x, y, text, o = {}) {
   const w = (text.length + sub.length) * 7.25 + 18 + ic, h = 22, x0 = x - w / 2;
   return `<g class="pill${k}"><rect class="shadow" x="${f(x0 + 2)}" y="${f(y - h / 2 + 2)}" width="${f(w)}" height="${h}" rx="11"/>` +
     `<rect class="face" x="${f(x0)}" y="${f(y - h / 2)}" width="${f(w)}" height="${h}" rx="11"/>` +
-    (o.icon ? `<image href="${o.icon}" x="${f(x0 + 5)}" y="${f(y - 8)}" width="16" height="16"/>` : '') +
+    (o.icon ? (() => { const id = `pi${++UID}`; return `<clipPath id="${id}"><rect x="${f(x0 + 5)}" y="${f(y - 8)}" width="16" height="16" rx="4"/></clipPath><image href="${o.icon}" clip-path="url(#${id})" x="${f(x0 + 5)}" y="${f(y - 8)}" width="16" height="16"/>`; })() : '') +
     (o.sym ? `<use href="#i-${o.sym}" x="${f(x0 + 6)}" y="${f(y - 7)}" width="14" height="14"/>` : '') +
     `<text x="${f(x + ic / 2)}" y="${f(y + 0.5)}">${esc(text)}${o.sub ? `<tspan class="k">${esc(sub)}</tspan>` : ''}</text></g>`;
 }
@@ -962,7 +964,13 @@ function pill(x, y, text, o = {}) {
 function stickerSVG(x, y, s) {
   const h = STK / 2;
   let g = `<rect class="stk-sh" x="${f(x - h + 1.5)}" y="${f(y - h + 1.5)}" width="${STK}" height="${STK}" rx="7"/><rect class="stk" x="${f(x - h)}" y="${f(y - h)}" width="${STK}" height="${STK}" rx="7"/>`;
-  if (s.icon) { const pad = s.kind === 'aws' ? 3 : 5; g += `<image href="${s.icon}" x="${f(x - h + pad)}" y="${f(y - h + pad)}" width="${STK - 2 * pad}" height="${STK - 2 * pad}" preserveAspectRatio="xMidYMid meet"/>`; }
+  if (s.kind === 'aws') {
+    // AWS icons are square: they fill the sticker and take its rounded corners (instructor's decision), ink ring on top
+    const id = `st${++UID}`;
+    g += `<clipPath id="${id}"><rect x="${f(x - h)}" y="${f(y - h)}" width="${STK}" height="${STK}" rx="7"/></clipPath>` +
+      `<image href="${s.icon}" clip-path="url(#${id})" x="${f(x - h)}" y="${f(y - h)}" width="${STK}" height="${STK}" preserveAspectRatio="xMidYMid slice"/>` +
+      `<rect class="stk-ring" x="${f(x - h)}" y="${f(y - h)}" width="${STK}" height="${STK}" rx="7"/>`;
+  } else if (s.icon) g += `<image href="${s.icon}" x="${f(x - h + 5)}" y="${f(y - h + 5)}" width="${STK - 10}" height="${STK - 10}" preserveAspectRatio="xMidYMid meet"/>`;
   else g += `<use class="stk-line" href="#i-${s.line}" x="${f(x - 9)}" y="${f(y - 9)}" width="18" height="18"/>`;
   return g;
 }
