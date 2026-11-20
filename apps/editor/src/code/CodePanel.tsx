@@ -11,6 +11,7 @@ import { applyText, parseText, printText, serializeDiagram, type TextError } fro
 import { useEditor } from '../state/store.ts';
 import { diagramText } from './language.ts';
 import { Icon } from '../ui/Icon.tsx';
+import { SideTabs } from '../notes/NotesPanel.tsx';
 
 /** Marks a change that came from the canvas, so it is not read back as typing. */
 const fromCanvas = Annotation.define<boolean>();
@@ -107,9 +108,8 @@ export default function CodePanel() {
   return (
     <section className="code-panel" aria-label="Diagram as text">
       <div className="code-head">
-        <Icon name="code" />
-        <b>{title}</b>
-        <span className="muted">text</span>
+        <SideTabs />
+        <b className="code-title">{title}</b>
         <span className="spacer" />
         {errors.length > 0 ? (
           <span className="chip chip--bad"><Icon name="x" />{errors.length} {errors.length === 1 ? 'error' : 'errors'}</span>

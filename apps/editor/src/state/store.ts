@@ -33,6 +33,8 @@ interface EditorState {
   flat: boolean;
   /** What the main area shows: the canvas, the canvas beside the text (Split), or the text alone (Code). */
   layout: 'canvas' | 'split' | 'code';
+  /** Which document the side panel shows in Split and Code: the diagram as text, or its Markdown notes. */
+  side: 'text' | 'notes';
   theme: Theme;
   save: SaveState;
   notice: Notice | null;
@@ -54,6 +56,9 @@ interface EditorState {
   rotate: () => void;
   setFlat: (flat: boolean) => void;
   setLayout: (l: 'canvas' | 'split' | 'code') => void;
+  setSide: (side: 'text' | 'notes') => void;
+  /** Replace the diagram's notes; typing is one undo step. */
+  setNotes: (text: string) => void;
   /** Replace positions with an auto-layout: one undo step, and the view fits the result. */
   applyLayout: (d: Diagram) => void;
 
@@ -115,6 +120,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   turn: 0,
   flat: false,
   layout: 'canvas',
+  side: 'text',
   theme: readTheme(),
   save: 'saved',
   notice: null,
@@ -177,6 +183,11 @@ export const useEditor = create<EditorState>()((set, get) => ({
   rotate: () => set((s) => ({ turn: ((s.turn + 1) % 4) as 0 | 1 | 2 | 3, docKey: s.docKey + 1 })),
   setFlat: (flat) => set((s) => (s.flat === flat ? {} : { flat, drag: null, docKey: s.docKey + 1 })),
   setLayout: (layout) => set({ layout, connectFrom: null }),
+  setSide: (side) => set({ side }),
+  setNotes: (text) => {
+    const { notes: _old, ...rest } = get().diagram;
+    get().commit(text ? { ...rest, notes: text } : rest, 'docnotes');
+  },
   applyLayout: (d) => {
     get().commit(d);
     set((s) => ({ docKey: s.docKey + 1 }));

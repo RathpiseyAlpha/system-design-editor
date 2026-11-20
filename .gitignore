@@ -12,3 +12,7 @@ Thumbs.db
 # Official AWS icons: fetched by tools/fetch_icons.py, not redistributed here until decided (SPEC section 12)
 design/icons/aws/
 apps/editor/dist/
+
+# Screenshots written by the browser checks
+editor-check*.png
+layout-sheet.png

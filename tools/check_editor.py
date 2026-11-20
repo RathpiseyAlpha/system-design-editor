@@ -305,6 +305,36 @@ try:
     key(p, "z", "KeyZ", mods=2)
     check("Undo puts the layout back in one step", pos(saved(p)) == pos(before))
 
+    # 17. Notes: the summary opens them beside the canvas; Markdown is kept in the file; the preview draws headings and
+    # https links, never an unsafe link or HTML; typing is one undo step.
+    key(p, "Escape")
+    time.sleep(0.2)
+    p.js("[...document.querySelectorAll('.insp button')].find(b=>/notes/i.test(b.textContent)).click();")
+    time.sleep(1.0)
+    check("Write notes opens the notes beside the canvas", p.js("return !!document.querySelector('.notes-input') && !!document.querySelector('.canvas');"))
+    note = "# Why\nTwo **app** servers.\n- [docs](https://example.org)\n- [bad](javascript:alert(1))\n<img src=x onerror=alert(1)>"
+    p.js("document.querySelector('.notes-input').focus();")
+    p.call("Input.insertText", text=note)
+    d = saved(p)
+    check("the notes are kept in the file", d.get("notes") == note)
+    p.js("[...document.querySelectorAll('.notes-panel button')].find(b=>b.textContent.trim()==='Preview').click();")
+    time.sleep(0.3)
+    v = p.js("""const v=document.querySelector('.notes-view');
+      return {h: v.querySelector('h3')?.textContent, b: v.querySelector('strong')?.textContent, links: [...v.querySelectorAll('a')].map(a=>a.getAttribute('href')),
+              img: !!v.querySelector('img'), text: v.textContent.includes('<img')};""")
+    check("the preview draws the Markdown and only the https link", v["h"] == "Why" and v["b"] == "app" and v["links"] == ["https://example.org"] and not v["img"] and v["text"], json.dumps(v))
+    p.js("document.activeElement && document.activeElement.blur();")
+    key(p, "z", "KeyZ", mods=2)
+    check("Undo removes the typed notes in one step", "notes" not in saved(p))
+    p.js("[...document.querySelectorAll('.side-tabs button')].find(b=>b.textContent.trim()==='Text').click();")
+    for _ in range(20):
+        time.sleep(0.25)
+        if p.js("return !!document.querySelector('.cm-content');"):
+            break
+    check("the Text tab brings back the diagram text", p.js("return !!document.querySelector('.cm-content');"))
+    p.js("document.querySelector('button[aria-label=\"Canvas\"]').click();")
+    time.sleep(0.5)
+
     # Leave a block selected for the screenshot.
     x, y = center(p, '[data-block="n5"] .top')
     p.call("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y, button="left", clickCount=1)

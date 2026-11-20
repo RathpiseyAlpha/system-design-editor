@@ -272,3 +272,31 @@ button.pal-item:active { cursor: grabbing; }
 }
 @container app (max-width: 1365px) { .body-split { grid-template-columns: 360px minmax(0, 1fr); } }
 .seg button svg { width: 15px; height: 15px; flex: none; }
+
+/* ---------------- M2: notes (a Markdown document in the file), beside the text in the side panel */
+.side-tabs button { gap: 6px; }
+.side-tabs button span { font: var(--t-small); }
+.code-title { min-width: 0; }
+.notes-input { display: block; width: 100%; height: 100%; min-height: 0; resize: none; border: 0; margin: 0; padding: var(--s3) var(--s4);
+  background: var(--sheet); color: var(--ink); font: 400 15px/24px var(--font-prose); }
+.notes-input:focus { outline: 3px solid var(--marker-strong); outline-offset: -3px; }
+.notes-input::placeholder { color: var(--muted); }
+.notes-view { min-height: 0; overflow: auto; padding: var(--s3) var(--s4) var(--s5); background: var(--sheet); font: 400 15px/24px var(--font-prose); color: var(--ink); }
+.notes-view:focus-visible { outline: 3px solid var(--marker-strong); outline-offset: -3px; }
+.notes-view > * { max-width: 68ch; margin: 0 0 12px; }
+.notes-view h3, .notes-view h4, .notes-view h5 { font-family: var(--font-mono); margin-top: 18px; }
+.notes-view h3 { font-size: 20px; line-height: 28px; }
+.notes-view h4 { font-size: 17px; line-height: 24px; }
+.notes-view h5 { font-size: 15px; line-height: 22px; }
+.notes-view > :first-child { margin-top: 0; }
+.notes-view ul, .notes-view ol { padding-left: 1.3em; }
+.notes-view li { margin-bottom: 4px; }
+.notes-view code { font: 500 13px/1 var(--font-mono); padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--sunken); }
+.notes-view pre { padding: 10px 12px; border: var(--bw) solid var(--edge); border-radius: var(--r-control); background: var(--sunken); overflow: auto; }
+.notes-view pre code { border: 0; padding: 0; background: none; font: 400 13px/20px var(--font-mono); }
+.notes-view blockquote { padding-left: 12px; border-left: 4px solid var(--marker); color: color-mix(in srgb, var(--ink) 85%, var(--paper)); }
+.notes-view a { color: var(--ink); text-decoration-thickness: 2px; text-decoration-color: var(--marker-strong); }
+.notes-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 6px var(--s3); border-top: var(--bw) solid var(--edge);
+  background: var(--sheet); font: var(--t-hint); }
+.notes-foot code { font: inherit; font-weight: 600; }
+.insp .field .btn--sm { justify-self: start; margin-top: 4px; }

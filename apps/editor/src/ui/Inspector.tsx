@@ -28,6 +28,13 @@ function Summary({ d }: { d: Diagram }) {
         Add blocks and zones from the list on the left, by click or by dragging them onto the canvas. Select a block to rename it or connect it;
         drag a zone by its name tab to move it with everything inside.
       </p>
+      <div className="field">
+        <span className="lbl">Notes</span>
+        <small className="muted">{d.notes ? `${d.notes.trim().split(/\s+/).length} words in Markdown.` : 'None yet: say why the diagram looks like this.'}</small>
+        <button className="btn btn--sm" type="button" onClick={() => { const s = useEditor.getState(); s.setSide('notes'); s.setLayout('split'); }}>
+          <Icon name="note" />{d.notes ? 'Open notes' : 'Write notes'}
+        </button>
+      </div>
     </>
   );
 }

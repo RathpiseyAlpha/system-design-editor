@@ -8,6 +8,7 @@ import { Inspector } from './ui/Inspector.tsx';
 
 // The text view loads only when it is opened, so the editor starts without CodeMirror.
 const CodePanel = lazy(() => import('./code/CodePanel.tsx'));
+const NotesPanel = lazy(() => import('./notes/NotesPanel.tsx'));
 
 function StatusBar() {
   const n = useEditor((s) => s.diagram.nodes.length);
@@ -71,6 +72,7 @@ function useShortcuts() {
 export function App() {
   useShortcuts();
   const layout = useEditor((s) => s.layout);
+  const side = useEditor((s) => s.side);
   const canvas = (
     <div className="canvas-wrap">
       <NoticeBar />
@@ -79,7 +81,7 @@ export function App() {
   );
   const code = (
     <Suspense fallback={<div className="code-panel code-loading">Opening the text view…</div>}>
-      <CodePanel />
+      {side === 'notes' ? <NotesPanel /> : <CodePanel />}
     </Suspense>
   );
   return (

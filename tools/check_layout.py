@@ -82,6 +82,24 @@ for w, h in SIZES:
             check(f"{tag} split: text and canvas both have room", s["both"])
             data = p.call("Page.captureScreenshot", format="png")["data"]
             shots.append((tag + " split", base64.b64decode(data)))
+            # Notes beside the canvas, previewed.
+            p.js("[...document.querySelectorAll('.side-tabs button')].find(b=>b.textContent.trim()==='Notes').click();")
+            time.sleep(0.6)
+            p.js("""const t=document.querySelector('.notes-input'); const set=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set;
+                    set.call(t,'# Why this design\\nTwo **app** servers behind one balancer, so one can fail.\\n\\n- Orders in `orders-db`\\n- Sessions in a cache\\n\\n> Ask: what breaks if the balancer fails?');
+                    t.dispatchEvent(new Event('input',{bubbles:true}));""")
+            time.sleep(0.3)
+            p.js("[...document.querySelectorAll('.notes-panel button')].find(b=>b.textContent.trim()==='Preview').click();")
+            time.sleep(0.4)
+            nt = p.js("""
+              const de=document.documentElement, top=document.querySelector('.topbar'), v=document.querySelector('.notes-view'), head=document.querySelector('.notes-panel .code-head');
+              return {sideways: de.scrollWidth>de.clientWidth, topFits: top.scrollWidth<=top.clientWidth+1, head: head.scrollWidth<=head.clientWidth+1,
+                      shown: !!v && !!v.querySelector('h3') && v.getBoundingClientRect().width>250};
+            """)
+            check(f"{tag} notes: no sideways scroll, the top bar and the panel head fit", not nt["sideways"] and nt["topFits"] and nt["head"])
+            check(f"{tag} notes: the preview shows the Markdown", nt["shown"])
+            data = p.call("Page.captureScreenshot", format="png")["data"]
+            shots.append((tag + " notes", base64.b64decode(data)))
         finally:
             p.close()
             time.sleep(0.3)
