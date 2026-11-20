@@ -1,6 +1,6 @@
 # Archboard — product spec
 
-Status: **M0 design approved** (2026-11-20, section 12); M1 is next. No application code yet. "Archboard" is a working name.
+Status: **M1 done** (2026-11-21): the editor core is built and checked; M2 is next. "Archboard" is a working name.
 
 ## 1. What it is
 
@@ -359,6 +359,10 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 18 | **Connections are routed automatically**; the file stores no bends. | Keeps the file clean and the text view simple; hand-drawn bends can be added later as an optional field. |
 | 19 | **Roles and zone kinds have one source**, `packages/engine/src/roles.json`; `tools/fetch_icons.py` reads it, and a test fails if the manifest differs. | One list, so the engine, the packs and the editor cannot disagree. |
 | 20 | **The flat view moves to M2**; M1 is the 3D view only. | M1 is already the largest milestone. |
+| 21 | **Zone membership follows position**: after any change, a zone's parent is the smallest zone holding its whole rectangle and a block's zone the innermost zone it stands in. Moving a zone (by its name tab) moves everything inside it. | One rule, so the file never disagrees with the canvas, whatever was dragged where. |
+| 22 | **Positions and zone corners snap to half cells** as they are dropped (as seen in the current view). | Tidy diagrams and stable text in the code view. |
+| 23 | **Labels are placed automatically**: zone tabs first, then connection labels, each at the first candidate place that covers no block and no other label. | Readable diagrams without hand-placing labels; no extra fields in the file. |
+| 24 | **Exported pictures** are standalone (embedded fonts and icons), without the grid, selection or handles; PNG at twice the screen resolution. | They look the same in slides, documents and chats. |
 
 Also decided by the instructor (2026-11-20): **AWS icons get rounded corners** to match the stickers (they fill the sticker and
 are clipped to its corner radius, as are the AWS zone icons in tabs). AWS's icon guidelines ask that icons not be cropped;

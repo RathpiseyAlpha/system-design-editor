@@ -27,6 +27,8 @@ interface EditorState {
   drag: Drag | null;
   /** "Connect to": the block a new connection starts from, waiting for the user to pick the other end. */
   connectFrom: string | null;
+  /** Quarter turns of the view (Rotate view). The file never changes when the view turns. */
+  turn: 0 | 1 | 2 | 3;
   theme: Theme;
   save: SaveState;
   notice: Notice | null;
@@ -45,6 +47,7 @@ interface EditorState {
   setNotice: (n: Notice | null) => void;
   setDrag: (d: Drag | null) => void;
   setConnectFrom: (id: string | null) => void;
+  rotate: () => void;
 
   add: (role: string, at?: [number, number]) => void;
   move: (id: string, x: number, y: number) => void;
@@ -55,7 +58,7 @@ interface EditorState {
 
   addZone: (kind: ZoneKind, access?: 'public' | 'private', at?: [number, number]) => void;
   moveZone: (id: string, dx: number, dy: number) => void;
-  resizeZone: (id: string, w: number, h: number) => void;
+  resizeZone: (id: string, w: number, h: number, x?: number, y?: number) => void;
   updateZone: (id: string, patch: Partial<Pick<DZone, 'label' | 'kind' | 'access'>>, key?: string) => void;
   connect: (from: string, to: string) => void;
   updateEdge: (id: string, patch: Partial<Pick<DEdge, 'kind' | 'label'>>, key?: string) => void;
@@ -64,7 +67,7 @@ interface EditorState {
 export type Drag =
   | { kind: 'node'; id: string; x: number; y: number }
   | { kind: 'zone'; id: string; dx: number; dy: number }
-  | { kind: 'resize'; id: string; w: number; h: number };
+  | { kind: 'resize'; id: string; x: number; y: number; w: number; h: number };
 
 function readTheme(): Theme {
   try {
@@ -101,6 +104,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   selected: null,
   drag: null,
   connectFrom: null,
+  turn: 0,
   theme: readTheme(),
   save: 'saved',
   notice: null,
@@ -160,6 +164,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   setNotice: (notice) => set({ notice }),
   setDrag: (drag) => set({ drag }),
   setConnectFrom: (connectFrom) => set({ connectFrom }),
+  rotate: () => set((s) => ({ turn: ((s.turn + 1) % 4) as 0 | 1 | 2 | 3, docKey: s.docKey + 1 })),
 
   add: (role, at) => {
     const [x, y] = at ?? get().viewCenter();
@@ -190,7 +195,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
     set({ selected: id });
   },
   moveZone: (id, dx, dy) => get().commit(moveZone(get().diagram, id, dx, dy)),
-  resizeZone: (id, w, h) => get().commit(resizeZone(get().diagram, id, w, h)),
+  resizeZone: (id, w, h, x, y) => get().commit(resizeZone(get().diagram, id, w, h, x, y)),
   updateZone: (id, patch, key) => get().commit(updateZone(get().diagram, id, patch), key),
   connect: (from, to) => {
     const { diagram, id } = addEdge(get().diagram, from, to);

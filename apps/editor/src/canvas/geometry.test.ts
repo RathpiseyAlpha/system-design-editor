@@ -50,8 +50,8 @@ describe('routing', () => {
     expect(p[1]![0]).toBeCloseTo(10 - radiusOf('cache') - 0.28);
   });
 
-  it('routes every connection of the 3-tier template without crossing a block', () => {
-    const d = fromTemplate('three-tier');
+  it.each(['static-website', 'three-tier', 'microservices', 'serverless-api', 'event-pipeline'])('routes every connection of the %s template without crossing a block', (tpl) => {
+    const d = fromTemplate(tpl);
     const byId = new Map(d.nodes.map((n) => [n.id, n]));
     for (const e of d.edges) {
       const p = route(byId.get(e.from)!, byId.get(e.to)!, d.nodes);
@@ -82,5 +82,43 @@ describe('drawing helpers', () => {
   it('paints back to front, stably', () => {
     const order = [node('b', 2, 2), node('a', 2, 2), node('c', 0, 1)].sort(paintOrder).map((n) => n.id);
     expect(order).toEqual(['c', 'a', 'b']);
+  });
+});
+
+import { rot, unrot, rotRect, unrotRect, rotateDiagram, placeLabels, blockBox } from './geometry.ts';
+
+describe('rotate view', () => {
+  it('four quarter turns come back, and unrot inverts rot', () => {
+    for (const r of [0, 1, 2, 3] as const) {
+      const [x, y] = rot(3.5, -2, r);
+      expect(unrot(x, y, r)).toEqual([3.5, -2].map((v) => v + 0) as [number, number]);
+    }
+  });
+  it('a turned zone rectangle turns back to itself', () => {
+    const z = { x: 3.8, y: 0.5, w: 3.8, h: 9.2 };
+    for (const r of [1, 2, 3] as const) {
+      const back = unrotRect(rotRect(z, r), r);
+      expect(back.x).toBeCloseTo(z.x); expect(back.y).toBeCloseTo(z.y); expect(back.w).toBeCloseTo(z.w); expect(back.h).toBeCloseTo(z.h);
+    }
+  });
+  it('turning keeps blocks inside their zones', () => {
+    const d = rotateDiagram(fromTemplate('three-tier'), 1);
+    for (const n of d.nodes) {
+      const z = d.zones.find((x) => x.id === n.zone);
+      if (z) expect(n.x >= z.x && n.x <= z.x + z.w && n.y >= z.y && n.y <= z.y + z.h, n.id).toBe(true);
+    }
+  });
+});
+
+describe('label placement', () => {
+  it('moves a label off a block when another place is free', () => {
+    const block = blockBox(node('a', 0, 0));
+    const onBlock: [number, number] = [(block.x0 + block.x1) / 2, (block.y0 + block.y1) / 2];
+    const at = placeLabels([{ id: 't', width: 80, at: [onBlock, [500, 500]] }], [block]);
+    expect(at.get('t')).toEqual([500, 500]);
+  });
+  it('two labels never share a place when there is room', () => {
+    const at = placeLabels([{ id: 'a', width: 80, at: [[0, 0]] }, { id: 'b', width: 80, at: [[10, 0], [0, 100]] }], []);
+    expect(at.get('b')).toEqual([0, 100]);
   });
 });

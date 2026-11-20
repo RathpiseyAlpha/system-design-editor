@@ -7,10 +7,11 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 in progress (2026-11-20).** Slices 1 to 3 of 5 are done: the engine package (format, roles, templates), the editor
-shell with the 3D canvas, and editing (drag with snap, arrow keys, add from the palette, delete, undo and redo, autosave,
-New, Open, Save, inspector). Next: slice 4 (create and nest zones, draw connections) and slice 5 (export, template picker,
-rotate view, checks at four sizes in both themes). What exists besides the code:
+**M1 done (2026-11-21); M2 next.** The editor core works: engine package (format, roles, six templates); 3D canvas with
+pan and zoom, rotate view, label placement; editing blocks (drag with snap, arrow keys, palette by click, search or drag,
+delete, undo and redo, autosave, New from a template, Open, Save); zones (add, move by the tab with their contents,
+resize, nest, edit); connections (draw from a port or with Connect to, select, kind and label); inspector for all three;
+export to PNG and SVG; layouts from 1280 x 720 to 1920 x 1080 in both themes. What exists besides the code:
 
 - `SPEC.md`: the product spec (users, scope by version, catalog and packs, file format, rule engine, embed and checker APIs,
   screen sizes, stack, milestones, decisions). It is the scope: change it first when the scope changes.
@@ -109,3 +110,6 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
 - Browser check (real mouse and keyboard in headless Chrome): start `node ../../node_modules/vite/bin/vite.js preview --port 4319
   --strictPort` in `apps/editor`, then `python -I tools/check_editor.py http://localhost:4319/ out.png 1280 720`. Stop the
   preview afterwards. Add a check there for every new interaction.
+- Layout check (sizes of SPEC section 9, light and dark, plus a contact sheet to look at):
+  `python tools/check_layout.py http://localhost:4319/ sheet.png`. Rotating, routing and label placement are pure
+  functions in `canvas/geometry.ts` (tested); membership of zones follows position (`state/ops.ts` `reassign`).

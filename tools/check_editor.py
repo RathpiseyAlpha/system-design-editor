@@ -179,6 +179,53 @@ try:
     z3 = next(z for z in d["zones"] if z["id"] == "z3")
     check("the corner handle resizes a zone, its far corner on the grid", abs(z3["w"] - (w0 - 2)) <= 0.5 and ((z3["x"] + z3["w"]) * 2) % 1 == 0, f"w {w0} -> {z3['w']}")
 
+    # 12. Rotate view: R turns the view a quarter; the file does not change; a drag in the turned view lands under the pointer.
+    before = json.dumps(saved(p), sort_keys=True)
+    p.js("document.activeElement && document.activeElement.blur();")
+    key(p, "Escape")
+    a0 = center(p, '[data-block="n7"] .top')
+    key(p, "r", "KeyR", text="r")
+    time.sleep(0.5)
+    after = json.dumps(saved(p), sort_keys=True)
+    a1 = center(p, '[data-block="n7"] .top')
+    check("R turns the view without changing the file", before == after and a0 != a1)
+    x, y = center(p, '[data-block="n7"] .top')
+    n7 = node(saved(p), "n7")
+    dx, dy = iso_px(2, 0)  # two cells along the turned view's x axis
+    drag_px(x, y, dx, dy)
+    n7b = node(saved(p), "n7")
+    moved = (round(n7b["x"] - n7["x"], 3), round(n7b["y"] - n7["y"], 3))
+    # One quarter turn shows file (x, y) at view (-y, x): two cells along the view's x axis are (0, -2) in the file.
+    check("a drag in the turned view moves the block along the turned axis", moved[0] == 0 and abs(moved[1] + 2) <= 0.5, f"moved {moved}")
+    for _ in range(3):
+        key(p, "r", "KeyR", text="r")
+    time.sleep(0.3)
+
+    # 13. Export a PNG: the download is a real PNG file.
+    import os, tempfile
+    dl = tempfile.mkdtemp()
+    p.call("Page.setDownloadBehavior", behavior="allow", downloadPath=dl)
+    p.js("const s=document.querySelector('select[aria-label=\"Export a picture\"]');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'png');s.dispatchEvent(new Event('change',{bubbles:true}));")
+    pngs = []
+    for _ in range(40):
+        time.sleep(0.25)
+        pngs = [f for f in os.listdir(dl) if f.endswith(".png")]
+        if pngs:
+            break
+    ok = bool(pngs) and open(os.path.join(dl, pngs[0]), "rb").read(8) == b"\x89PNG\r\n\x1a\n"
+    check("Export PNG downloads a PNG picture", ok, pngs[0] if pngs else "no file")
+    if ok:
+        import shutil
+        shutil.copy(os.path.join(dl, pngs[0]), SHOT.replace(".png", "-export.png"))
+
+    # 14. New from a template.
+    p.js("const s=document.querySelector('select[aria-label=\"New diagram\"]');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'microservices');s.dispatchEvent(new Event('change',{bubbles:true}));")
+    d = saved(p)
+    check("New loads a template", d["title"] == "Microservices" and len(d["nodes"]) == 10)
+    key(p, "z", "KeyZ", mods=2)
+    d = saved(p)
+    check("and Undo brings the previous diagram back", d["title"] == "Online shop")
+
     # Leave a block selected for the screenshot.
     x, y = center(p, '[data-block="n5"] .top')
     p.call("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y, button="left", clickCount=1)

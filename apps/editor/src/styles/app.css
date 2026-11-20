@@ -65,7 +65,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pal-item b { font: 700 12px/16px var(--font-mono); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pal-item small { font: 400 12px/16px var(--font-mono); color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .statusbar { display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); background: var(--sheet); border-top: var(--bw) solid var(--edge); font: var(--t-hint); color: var(--muted); white-space: nowrap; overflow: hidden; }
-.statusbar .chip { font-size: 11px; padding: 0 8px; }
+.statusbar .chip { font-size: 12px; padding: 0 8px; }
 
 /* ---------------- inspector */
 .insp { padding: var(--s4); display: grid; gap: var(--s4); align-content: start; overflow: auto; min-height: 0; }
@@ -174,7 +174,7 @@ svg.iso text { font-family: var(--font-mono); fill: var(--ink); }
 .chip svg { width: 13px; height: 13px; }
 .chip--ok { color: var(--ok); background: var(--ok-soft); border-color: var(--ok); }
 .chip--warn { color: var(--warn); background: var(--warn-soft); border-color: var(--warn); }
-kbd { font: 600 11px/15px var(--font-mono); border: var(--bw-fine) solid var(--edge); border-bottom-width: 3px; border-radius: 6px; padding: 0 4px; background: var(--sheet); color: var(--ink); }
+kbd { font: 600 12px/15px var(--font-mono); border: var(--bw-fine) solid var(--edge); border-bottom-width: 3px; border-radius: 6px; padding: 0 4px; background: var(--sheet); color: var(--ink); }
 input.doc-title { border: var(--bw-fine) dashed transparent; border-radius: 6px; background: transparent; color: var(--ink); width: 22ch; min-width: 8ch; }
 input.doc-title:hover { border-color: var(--line); }
 input.doc-title:focus { border-style: solid; border-color: var(--edge); background: var(--sheet); outline: none; }
@@ -226,10 +226,15 @@ button.pal-item:active { cursor: grabbing; }
   font: 400 13px/18px var(--font-prose); color: var(--ink); }
 .hintbar svg { width: 15px; height: 15px; color: var(--marker-strong); }
 .hintbar b { font-family: var(--font-mono); }
-.zone-ico svg { color: var(--ink); }
+.zone-ico svg { color: var(--sticker-ink); }
 .linklike { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-align: left; }
 .linklike:hover { text-decoration: underline; }
 .row-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .field > .btn { justify-self: start; }
 .field small.muted { font: var(--t-hint); }
 .btn[aria-pressed="true"] { background: var(--marker); border-color: var(--edge); }
+
+/* ---------------- slice 5 */
+.canvas-tools { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; z-index: 2; }
+.btn--sm { min-height: 30px; padding: 3px 10px; font-size: 12px; }
+.insp small, .side small { font: var(--t-hint); }

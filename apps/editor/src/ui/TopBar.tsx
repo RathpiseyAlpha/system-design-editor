@@ -3,6 +3,7 @@ import { serializeDiagram, TEMPLATES } from '@archboard/engine';
 import { useEditor, type Theme } from '../state/store.ts';
 import { PACKS, isPack } from '../catalog/packs.ts';
 import { Icon } from './Icon.tsx';
+import { exportImage } from './exportImage.ts';
 
 /** The brand mark: a tiny compute block. */
 function Mark() {
@@ -38,6 +39,23 @@ export function TopBar() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  // Export without the selection's halo and handles: clear it, let the canvas redraw, export, then select again.
+  const exportPicture = async (kind: 'png' | 'svg') => {
+    const s = useEditor.getState(), was = s.selected;
+    const svg = document.querySelector<SVGSVGElement>('svg.iso');
+    if (!svg) return;
+    s.select(null);
+    await new Promise((r) => setTimeout(r, 60));
+    try {
+      await exportImage(svg, kind, fileName(s.diagram.title).replace(/\.archboard\.json$/, ''));
+      s.setNotice({ kind: 'ok', title: `Exported a ${kind.toUpperCase()} picture of ${s.diagram.title}.` });
+    } catch (err) {
+      s.setNotice({ kind: 'bad', title: 'The picture could not be exported.', lines: [String((err as Error).message ?? err)] });
+    } finally {
+      s.select(was);
+    }
+  };
+
   return (
     <header className="topbar">
       <span className="brand"><Mark />Archboard</span>
@@ -68,6 +86,11 @@ export function TopBar() {
         }}
       />
       <button className="btn" type="button" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
+      <select className="input select file-select" aria-label="Export a picture" value="" onChange={(e) => { const v = e.target.value; if (v === 'png' || v === 'svg') void exportPicture(v); }}>
+        <option value="">Export</option>
+        <option value="png">Export PNG picture</option>
+        <option value="svg">Export SVG picture</option>
+      </select>
       <span className="vsep" />
       <div className="seg pack-seg" role="group" aria-label="Show as">
         {PACKS.map((p) => (

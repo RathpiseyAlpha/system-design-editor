@@ -58,6 +58,7 @@ function useShortcuts() {
       if (e.key === 'Escape') { if (s.connectFrom) s.setConnectFrom(null); else s.select(null); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selected) { e.preventDefault(); s.remove([s.selected]); }
       else if (e.key.toLowerCase() === 'a') { e.preventDefault(); findService(); }
+      else if (e.key.toLowerCase() === 'r') { e.preventDefault(); s.rotate(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

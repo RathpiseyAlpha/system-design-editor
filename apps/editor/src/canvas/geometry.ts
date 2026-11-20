@@ -121,3 +121,85 @@ export function bounds(d: Diagram): { x0: number; y0: number; w: number; h: numb
 
 /** Back-to-front order for painting: blocks further back (smaller x + y) first. Ties broken by id for a stable order. */
 export const paintOrder = (a: DNode, b: DNode): number => a.x + a.y - (b.x + b.y) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+// ---------------------------------------------------------------- rotate view (M1 slice 5): the camera turns, the file does not
+
+export type Turn = 0 | 1 | 2 | 3;
+
+/** A ground point as seen after turning the view `r` quarter turns. */
+export function rot(x: number, y: number, r: Turn): Pt {
+  switch (r) {
+    case 1: return [-y, x];
+    case 2: return [-x, -y];
+    case 3: return [y, -x];
+    default: return [x, y];
+  }
+}
+/** The ground point in the file for a point seen in a view turned `r` quarter turns (the inverse of rot). */
+export const unrot = (x: number, y: number, r: Turn): Pt => rot(x, y, ((4 - r) % 4) as Turn);
+
+/** A rectangle on the ground (x, y, w, h) after turning by r: both corners turn, then x, y is the smaller corner again. */
+export function rotRect(z: { x: number; y: number; w: number; h: number }, r: Turn): { x: number; y: number; w: number; h: number } {
+  const [ax, ay] = rot(z.x, z.y, r), [bx, by] = rot(z.x + z.w, z.y + z.h, r);
+  return { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) };
+}
+export const unrotRect = (z: { x: number; y: number; w: number; h: number }, r: Turn) => rotRect(z, ((4 - r) % 4) as Turn);
+
+/** The diagram as the turned view sees it: positions and zone rectangles turned, everything else the same. */
+export function rotateDiagram(d: Diagram, r: Turn): Diagram {
+  if (r === 0) return d;
+  return {
+    ...d,
+    nodes: d.nodes.map((n) => { const [x, y] = rot(n.x, n.y, r); return { ...n, x, y }; }),
+    zones: d.zones.map((z) => ({ ...z, ...rotRect(z, r) })),
+  };
+}
+
+// ---------------------------------------------------------------- label placement (M1 slice 5)
+
+export interface Box { x0: number; y0: number; x1: number; y1: number }
+const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+const pillBox = (x: number, y: number, w: number): Box => ({ x0: x - w / 2 - 3, y0: y - 13, x1: x + w / 2 + 3, y1: y + 13 });
+
+/** The screen box a block covers (body, sticker on top, name pill under a plate). */
+export function blockBox(n: DNode): Box {
+  const shape = roleInfo(n.role).shape, sh = SHAPES[shape];
+  const [cx, cy] = P(n.x, n.y);
+  const a = isCyl(sh) ? Math.SQRT2 * sh.r * IX : 2 * sh.s * IX, b = isCyl(sh) ? Math.SQRT2 * sh.r * IY : 2 * sh.s * IY;
+  return { x0: cx - a, y0: cy - sh.h - b - 4, x1: cx + a, y1: cy + b + (shape === 'plate' ? 34 : 4) };
+}
+
+export interface LabelAsk { id: string; width: number; at: Pt[] }
+
+/**
+ * Place pill labels: each takes the first of its candidate points where it covers no block and no label placed before it,
+ * or its first candidate when none is free. Asks are placed in order (zone tabs first, then connection labels).
+ */
+export function placeLabels(asks: LabelAsk[], blocks: Box[]): Map<string, Pt> {
+  const placed: Box[] = [];
+  const out = new Map<string, Pt>();
+  for (const ask of asks) {
+    const free = ask.at.find(([x, y]) => { const b = pillBox(x, y, ask.width); return !blocks.some((o) => overlaps(b, o)) && !placed.some((o) => overlaps(b, o)); });
+    const at = free ?? ask.at[0]!;
+    out.set(ask.id, at);
+    placed.push(pillBox(at[0], at[1], ask.width));
+  }
+  return out;
+}
+
+/** Where a zone's name tab may go, best first: networks and regions below their left corner, other zones above their right. */
+export function tabCandidates(z: { kind: string; x: number; y: number; w: number; h: number }): Pt[] {
+  const plate = z.kind === 'network' || z.kind === 'region';
+  const L = P(z.x, z.y + z.h), R = P(z.x + z.w, z.y), T = P(z.x, z.y), B = P(z.x + z.w, z.y + z.h);
+  const below: Pt[] = [[L[0] + 40, L[1] + 44], [B[0], B[1] + 34], [B[0] - 70, B[1] + 2]];
+  const above: Pt[] = [[R[0] - 6, R[1] - 16], [T[0], T[1] - 18], [(T[0] + R[0]) / 2, (T[1] + R[1]) / 2 - 16], [(T[0] + L[0]) / 2, (T[1] + L[1]) / 2 - 16]];
+  return plate ? [...below, ...above] : [...above, ...below];
+}
+
+/** Where a connection's label may go, best first: the middle of each straight part (longest part first), then its thirds. */
+export function edgeLabelCandidates(screen: Pt[]): Pt[] {
+  const segs = screen.slice(1).map((q, i) => ({ p: screen[i]!, q, L: Math.hypot(q[0] - screen[i]![0], q[1] - screen[i]![1]) }));
+  segs.sort((a, b) => b.L - a.L);
+  const at = (s: { p: Pt; q: Pt }, t: number): Pt => [s.p[0] + (s.q[0] - s.p[0]) * t, s.p[1] + (s.q[1] - s.p[1]) * t];
+  return [...segs.map((s) => at(s, 0.5)), ...segs.flatMap((s) => [at(s, 1 / 3), at(s, 2 / 3)])];
+}

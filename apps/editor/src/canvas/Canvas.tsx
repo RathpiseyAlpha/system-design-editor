@@ -6,8 +6,8 @@ import { zoom, zoomIdentity, zoomTransform, type ZoomBehavior } from 'd3-zoom';
 import type { Diagram, DZone, ZoneKind } from '@archboard/engine';
 import { useEditor, type Drag } from '../state/store.ts';
 import { moveZone, resizeZone } from '../state/ops.ts';
-import { Block, Pill, Wire, ZoneResize, ZoneShape, ZoneTab } from './parts.tsx';
-import { P, LIFT, bounds, paintOrder, route, snap, toGround, f, type Pt } from './geometry.ts';
+import { Block, Pill, Wire, ZoneResize, ZoneShape, ZoneTab, zoneTabWidth } from './parts.tsx';
+import { P, LIFT, bounds, paintOrder, route, snap, toGround, f, rot, unrot, rotRect, unrotRect, rotateDiagram, placeLabels, blockBox, tabCandidates, edgeLabelCandidates, pillWidth, type Pt, type Turn } from './geometry.ts';
 import { Icon } from '../ui/Icon.tsx';
 
 /** Drag-and-drop type for palette items: a role id, or "zone:<kind>[:<access>]". */
@@ -42,7 +42,7 @@ function withDrag(doc: Diagram, drag: Drag | null): Diagram {
   if (!drag) return doc;
   if (drag.kind === 'node') return { ...doc, nodes: doc.nodes.map((n) => (n.id === drag.id ? { ...n, x: drag.x, y: drag.y } : n)) };
   if (drag.kind === 'zone') return moveZone(doc, drag.id, drag.dx, drag.dy);
-  return resizeZone(doc, drag.id, drag.w, drag.h);
+  return resizeZone(doc, drag.id, drag.w, drag.h, drag.x, drag.y);
 }
 
 interface Handlers {
@@ -56,7 +56,9 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
   const pack = useEditor((s) => s.pack);
   const selected = useEditor((s) => s.selected);
   const drag = useEditor((s) => s.drag);
-  const d = useMemo(() => withDrag(doc, drag), [doc, drag]);
+  const turn = useEditor((s) => s.turn);
+  // The scene draws the file as the turned view sees it (Rotate view); handlers turn edits back into file coordinates.
+  const d = useMemo(() => rotateDiagram(withDrag(doc, drag), turn), [doc, drag, turn]);
   const byId = useMemo(() => new Map(d.nodes.map((n) => [n.id, n])), [d.nodes]);
   const wires = useMemo(
     () =>
@@ -64,17 +66,24 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
         const a = byId.get(e.from), b = byId.get(e.to);
         if (!a || !b) return [];
         const screen = route(a, b, d.nodes).map(([gx, gy]): Pt => { const [x, y] = P(gx, gy); return [x, y - LIFT]; });
-        let best = 0, at: Pt = [0, 0];
-        for (let i = 1; i < screen.length; i++) {
-          const [p, q] = [screen[i - 1]!, screen[i]!], L = Math.hypot(q[0] - p[0], q[1] - p[1]);
-          if (L > best) { best = L; at = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; }
-        }
-        return [{ e, screen, at }];
+        return [{ e, screen }];
       }),
     [d.edges, d.nodes, byId],
   );
   const zones = useMemo(() => zoneDepthOrder(d.zones), [d.zones]);
   const nodes = useMemo(() => [...d.nodes].sort(paintOrder), [d.nodes]);
+  // Zone tabs first, then connection labels: each takes the first candidate place that covers no block and no other label.
+  const labelAt = useMemo(
+    () =>
+      placeLabels(
+        [
+          ...zones.map((z) => ({ id: z.id, width: zoneTabWidth(z, pack), at: tabCandidates(z) })),
+          ...wires.filter((w) => w.e.label).map((w) => ({ id: w.e.id, width: pillWidth(w.e.label!), at: edgeLabelCandidates(w.screen) })),
+        ],
+        d.nodes.map(blockBox),
+      ),
+    [zones, wires, d.nodes, pack],
+  );
   const selZone = d.zones.find((z) => z.id === selected);
 
   return (
@@ -84,8 +93,8 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
       {nodes.map((n) => (
         <Block key={n.id} node={n} pack={pack} selected={selected === n.id} onPointerDown={h.onBlockPointerDown} onKeyDown={h.onBlockKeyDown} />
       ))}
-      {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} onPointerDown={h.onZonePointerDown} />)}
-      {wires.filter((w) => w.e.label).map(({ e, at }) => <Pill key={e.id} x={at[0]} y={at[1]} text={e.label!} />)}
+      {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} at={labelAt.get(z.id)!} onPointerDown={h.onZonePointerDown} />)}
+      {wires.filter((w) => w.e.label).map(({ e }) => { const at = labelAt.get(e.id)!; return <Pill key={e.id} x={at[0]} y={at[1]} text={e.label!} />; })}
       {selZone && <ZoneResize z={selZone} onPointerDown={h.onResizePointerDown} />}
     </>
   );
@@ -153,7 +162,7 @@ export function Canvas() {
       viewCenter: () => {
         const [sx, sy] = zoomTransform(svg).invert([svg.clientWidth / 2, svg.clientHeight / 2]);
         const [gx, gy] = toGround(sx, sy);
-        return [snap(gx), snap(gy)];
+        return unrot(snap(gx), snap(gy), useEditor.getState().turn);
       },
     });
     return () => { select(svg).on('.zoom', null); };
@@ -166,7 +175,7 @@ export function Canvas() {
   };
   const groundAt = (clientX: number, clientY: number): [number, number] => {
     const [gx, gy] = toGround(...layerAt(clientX, clientY));
-    return [snap(gx), snap(gy)];
+    return unrot(snap(gx), snap(gy), useEditor.getState().turn);
   };
   const k = () => zoomTransform(svgRef.current!).k;
 
@@ -199,10 +208,11 @@ export function Canvas() {
         st.select(id);
         const node = st.diagram.nodes.find((n) => n.id === id);
         if (!node) return;
+        const t = st.turn, [vx, vy] = rot(node.x, node.y, t);
         trackPointer(
           e,
           k(),
-          (dx, dy) => (dx === 0 && dy === 0 ? [node.x, node.y] : [snap(node.x + dx), snap(node.y + dy)]),
+          (dx, dy) => (dx === 0 && dy === 0 ? [node.x, node.y] : unrot(snap(vx + dx), snap(vy + dy), t)),
           ([x, y]) => useEditor.getState().setDrag({ kind: 'node', id, x, y }),
           ([x, y]) => {
             const s = useEditor.getState();
@@ -215,7 +225,8 @@ export function Canvas() {
       // along the grid, Delete removes it.
       onBlockKeyDown: (e, id) => {
         const s = useEditor.getState();
-        const step = ARROWS[e.key];
+        const arrow = ARROWS[e.key];
+        const step = arrow ? unrot(arrow[0], arrow[1], s.turn) : undefined;
         if (e.key === 'Enter' || e.key === ' ') {
           if (s.connectFrom && s.connectFrom !== id) s.connect(s.connectFrom, id);
           else s.select(id);
@@ -234,11 +245,12 @@ export function Canvas() {
         useEditor.getState().select(id);
         const z = useEditor.getState().diagram.zones.find((x) => x.id === id);
         if (!z) return;
-        // The zone's corner lands on the grid; what is inside moves by the same amount and keeps its arrangement.
+        const t = useEditor.getState().turn, v = rotRect(z, t);
+        // The zone's corner lands on the grid (as seen); what is inside moves by the same amount and keeps its arrangement.
         trackPointer(
           e,
           k(),
-          (dx, dy) => (dx === 0 && dy === 0 ? [0, 0] : [snap(z.x + dx) - z.x, snap(z.y + dy) - z.y]),
+          (dx, dy) => (dx === 0 && dy === 0 ? [0, 0] : unrot(snap(v.x + dx) - v.x, snap(v.y + dy) - v.y, t)),
           ([dx, dy]) => useEditor.getState().setDrag({ kind: 'zone', id, dx, dy }),
           ([dx, dy]) => {
             const s = useEditor.getState();
@@ -253,16 +265,19 @@ export function Canvas() {
         e.preventDefault();
         const z = useEditor.getState().diagram.zones.find((x) => x.id === id);
         if (!z) return;
-        // The far corner lands on the grid.
+        const t = useEditor.getState().turn, v = rotRect(z, t);
+        // The far corner (as seen) lands on the grid; the new rectangle is turned back into the file.
+        const fileRect = (w: number, h: number) => unrotRect({ x: v.x, y: v.y, w, h }, t);
         trackPointer(
           e,
           k(),
-          (dx, dy) => (dx === 0 && dy === 0 ? [z.w, z.h] : [Math.max(2, snap(z.x + z.w + dx) - z.x), Math.max(2, snap(z.y + z.h + dy) - z.y)]),
-          ([w, h]) => useEditor.getState().setDrag({ kind: 'resize', id, w, h }),
+          (dx, dy) => (dx === 0 && dy === 0 ? [v.w, v.h] : [Math.max(2, snap(v.x + v.w + dx) - v.x), Math.max(2, snap(v.y + v.h + dy) - v.y)]),
+          ([w, h]) => useEditor.getState().setDrag({ kind: 'resize', id, ...fileRect(w, h) }),
           ([w, h]) => {
             const s = useEditor.getState();
             s.setDrag(null);
-            s.resizeZone(id, w, h);
+            const r = fileRect(w, h);
+            s.resizeZone(id, r.w, r.h, r.x, r.y);
           },
         );
       },
@@ -274,7 +289,7 @@ export function Canvas() {
   const fit = useCallback(() => {
     const svg = svgRef.current, z = zoomRef.current;
     if (!svg || !z) return;
-    const b = bounds(diagramRef.current), W = svg.clientWidth, H = svg.clientHeight, pad = 48;
+    const b = bounds(rotateDiagram(diagramRef.current, useEditor.getState().turn as Turn)), W = svg.clientWidth, H = svg.clientHeight, pad = 48;
     const s = Math.max(ZOOM_MIN, Math.min(1, (W - 2 * pad) / b.w, (H - 2 * pad) / b.h));
     select(svg).call(z.transform, zoomIdentity.translate((W - b.w * s) / 2 - b.x0 * s, (H - b.h * s) / 2 - b.y0 * s).scale(s));
   }, []);
@@ -325,7 +340,7 @@ export function Canvas() {
       >
         <g ref={layerRef}>
           <Grid />
-          <Scene d={diagram} h={handlers} />
+          <g className="scene"><Scene d={diagram} h={handlers} /></g>
           {rubber && <line className="rubber" x1={f(rubber.a[0])} y1={f(rubber.a[1])} x2={f(rubber.b[0])} y2={f(rubber.b[1])} markerEnd="url(#head)" />}
         </g>
       </svg>
@@ -335,6 +350,9 @@ export function Canvas() {
           <span>Pick the block to connect <b>{fromLabel}</b> to. Esc cancels.</span>
         </div>
       )}
+      <div className="canvas-tools">
+        <button className="btn btn--sm" type="button" title="Rotate view (R)" onClick={() => useEditor.getState().rotate()}><Icon name="rotate" /><span className="lbl">Rotate view</span></button>
+      </div>
       <div className="zoombar">
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}><Icon name="minus" /></button>
         <span ref={zoomLabel} className="zoom-val">100%</span>

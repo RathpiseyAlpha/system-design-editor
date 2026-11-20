@@ -132,9 +132,12 @@ export function moveZone(d: Diagram, id: string, dx: number, dy: number): Diagra
   });
 }
 
-/** Resize a zone from its far corner (its near corner stays put). At least 2 x 2 cells. */
-export function resizeZone(d: Diagram, id: string, w: number, h: number): Diagram {
-  return reassign({ ...d, zones: d.zones.map((z) => (z.id === id ? { ...z, w: Math.max(2, w), h: Math.max(2, h) } : z)) });
+/** Resize a zone (at least 2 x 2 cells). Its corner stays put unless a new one is given (a turned view drags another corner). */
+export function resizeZone(d: Diagram, id: string, w: number, h: number, x?: number, y?: number): Diagram {
+  return reassign({
+    ...d,
+    zones: d.zones.map((z) => (z.id === id ? { ...z, w: Math.max(2, w), h: Math.max(2, h), ...(x !== undefined && y !== undefined ? { x, y } : {}) } : z)),
+  });
 }
 
 export function updateZone(d: Diagram, id: string, patch: Partial<Pick<DZone, 'label' | 'kind' | 'access'>>): Diagram {

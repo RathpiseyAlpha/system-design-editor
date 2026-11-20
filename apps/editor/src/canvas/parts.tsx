@@ -189,16 +189,20 @@ export function ZoneShape({ z, selected }: { z: DZone; selected?: boolean }) {
  * The zone's name tab, which is also its handle: drag it to move the zone with everything inside. Networks and regions label
  * their left corner (below the plate); other zones their right corner, where blocks rarely stand.
  */
-export function ZoneTab({ z, pack, onPointerDown }: { z: DZone; pack: PackId; onPointerDown?: (e: PointerEvent<SVGGElement>, id: string) => void }) {
-  const plate = z.kind === 'network' || z.kind === 'region';
-  const [mx, my] = plate ? P(z.x, z.y + z.h) : P(z.x + z.w, z.y);
+export function ZoneTab({ z, pack, at, onPointerDown }: { z: DZone; pack: PackId; at: Pt; onPointerDown?: (e: PointerEvent<SVGGElement>, id: string) => void }) {
   const { kind, icon } = zoneLabel(z.kind, z.access, pack);
   return (
     <g className="tab-handle" data-zone-tab={z.id} onPointerDown={onPointerDown ? (e) => onPointerDown(e, z.id) : undefined}>
       <title>Drag to move {z.label} and everything inside it</title>
-      <Pill x={mx + (plate ? 40 : -6)} y={my + (plate ? 44 : -16)} text={z.label} sub={kind} icon={icon} />
+      <Pill x={at[0]} y={at[1]} text={z.label} sub={kind} icon={icon} />
     </g>
   );
+}
+
+/** The width of a zone's tab, for label placement. */
+export function zoneTabWidth(z: DZone, pack: PackId): number {
+  const { kind, icon } = zoneLabel(z.kind, z.access, pack);
+  return pillWidth(z.label, kind, Boolean(icon));
 }
 
 /** The resize handle at a selected zone's far corner. */
