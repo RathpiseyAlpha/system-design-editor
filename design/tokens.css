@@ -1,4 +1,5 @@
 /* System design editor: design tokens. The one source of colours, type, sizes, shadows and motion.
+   The editor is vendor-neutral: categories and zones are generic; icon packs (AWS, open source...) only add product icons.
    Direction: soft neo-brutalism on drafting paper, with a 3D (isometric) canvas, after the look of
    designed-to-scale.vercel.app (warm paper, ink outlines, hard offset shadows, mono type, a green highlighter for
    "active", isometric blocks on a faint diagonal grid). Every value here is our own.
@@ -101,8 +102,12 @@
   --block-h: 46px;     /* height of a service block */
   --plate-h: 8px;      /* thickness of a zone floor plate */
 
+  /* Icon stickers: product logos and AWS icons sit on a light label in both themes, so dark logos never vanish */
+  --sticker: #FFFDF8; --sticker-edge: #1E1B17; --sticker-ink: #1E1B17; --sticker-size: 30px;
+
   /* Outlines and corners */
   --bw: 2px; --bw-block: 2.25px; --bw-fine: 1.5px;
+  --r-block: 5px;      /* rounded outer corners of box, low box and plate blocks */
   --r-chip: 999px; --r-control: 8px; --r-panel: 14px;
 
   /* Hard offset shadows (no blur). Hover lifts, press sinks into place. */

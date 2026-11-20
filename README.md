@@ -1,13 +1,16 @@
 # System design editor
 
-Draw cloud architectures as 3D blocks on a grid, or type them as text. Every service is shown as its AWS product or its
-free open-source equivalent (Amazon S3 or MinIO, RDS or PostgreSQL). Made for the course GICI5CC, Introduction to Cloud
-Computing (Institute of Technology of Cambodia), and free for anyone.
+Design the architecture of any system as 3D blocks on a grid, or type it as text. Show the same diagram as generic roles,
+as AWS services or as open-source projects: the diagram stays the same, only names and icons change. Free for anyone;
+built first for the Cloud Computing course at the Institute of Technology of Cambodia, which embeds it with an optional
+learning mode.
 
 **Status: design phase.** No application code yet.
 
-- [`SPEC.md`](SPEC.md): what it does, the diagram file format, the embed and checker APIs, milestones.
+- [`SPEC.md`](SPEC.md): what it does, the file format, icon packs, the embed and checker APIs, screen sizes, milestones.
 - [`design/design-system.html`](design/design-system.html): design system and key screens (open it in a browser).
 - [`design/tokens.css`](design/tokens.css): colours, type, sizes and motion.
+- [`tools/fetch_icons.py`](tools/fetch_icons.py) and [`design/icons/SOURCES.md`](design/icons/SOURCES.md): product icons,
+  their sources and terms. The AWS icons are fetched by the script, not stored in this repository.
 
-Working name: Archboard.
+Working name: Archboard. Logos and product names are trademarks of their owners.

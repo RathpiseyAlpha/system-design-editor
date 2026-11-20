@@ -8,3 +8,6 @@ coverage/
 .DS_Store
 Thumbs.db
 .claude/settings.local.json
+
+# Official AWS icons: fetched by tools/fetch_icons.py, not redistributed here until decided (SPEC section 12)
+design/icons/aws/

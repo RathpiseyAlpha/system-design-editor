@@ -1,161 +1,132 @@
 # Archboard — product spec
 
-Status: **design phase** (2026-11-20). No code yet. "Archboard" is a working name.
+Status: **design phase** (2026-11-20). No application code yet. "Archboard" is a working name.
 
 ## 1. What it is
 
-A web editor for drawing cloud system architectures from a prepared set of services. Every service is a *role*
-(object storage, load balancer, queue…) that can be shown as its AWS product or its free open-source equivalent
-(Amazon S3 ↔ MinIO). Students of GICI5CC (Introduction to Cloud Computing, ITC, year 5) use it to design and
-explain architectures. Anyone else can use it free in the browser, with nothing to install.
+A web editor for designing the architecture of **any** system: web apps, microservices, data pipelines, IoT, internal
+platforms, cloud deployments. Services are 3D (isometric) blocks on a grid, zones are raised floor plates, and the same
+diagram can be edited as text. The editor itself is **vendor-neutral**: a diagram is written in generic roles (service,
+database, queue, cache...) and generic zones (region, network, subnet...). **Icon packs** only rename and re-icon it:
+Generic, AWS and Open source first, others (Google Cloud, Azure, Kubernetes) later.
 
-It is a **separate product with its own folder, build and release**. Other sites (the course lab site `../labsite`,
-the student portal) use it through an embed API and a checker API (section 8); it never depends on them.
+It is a separate product with its own folder, build and release. Anyone can use it free in the browser. Other sites use
+it through an embed API and a checker API (section 8); one of them is the Cloud Computing course's lab site (`../labsite`),
+which adds an optional **learning mode** (challenges with checks). The core editor knows nothing about courses.
 
-Feature model: the kind of tool Eraser (eraser.io) is for cloud diagrams — a canvas you draw on **and** a text
-("diagram as code") view of the same diagram that stays in sync, auto-layout, a notes document beside the diagram,
-export and embed — narrowed to cloud architecture and made for teaching (roles, open-source equivalents, checks).
-The text syntax, look and names are our own.
+Feature model: the kind of tool Eraser (eraser.io) is for diagrams (a canvas and a "diagram as code" text view kept in
+sync, auto-layout, notes, export, embed), with a 3D look and generic roles. Text syntax, look and names are our own.
+
+Look: soft neo-brutalism after designed-to-scale.vercel.app (warm paper, ink outlines, hard offset shadows, mono type,
+isometric blocks on a faint diagonal grid). Tokens, components and screens: `design/` (open `design/design-system.html`).
 
 ## 2. Users and what they need
 
 | User | Context | Main jobs | Success looks like |
 |---|---|---|---|
-| Student (primary) | Year 5, has used the AWS console in the labs (EC2, S3, VPC, RDS, Lambda, API Gateway) | Draw an architecture for a scenario; see the open-source equivalent of each AWS service; hand in a diagram for a challenge and get feedback | Draws a 3-tier app in a VPC in under 10 minutes without reading help |
-| Lecturer | Heng Rathpisey, teaches the course | Draw diagrams for slides; write a challenge (scenario + rules); see which rules each student met | Writes a challenge in under 20 minutes; never has to grade a diagram by eye for the rule-checkable parts |
-| General user | Anyone sketching an architecture | Draw quickly, export a picture, keep the file | Exports a clean PNG of a 15-node diagram |
+| Engineer or team | Designing or documenting a system, any stack | Sketch fast, keep the file in git, export a clean picture, show it in AWS or open-source terms | A 15-block diagram drawn and exported in 10 minutes |
+| Student | Any course with system design; first host: Cloud Computing at ITC | Draw an architecture for a scenario; see equivalent products across vendors; hand in for checks (learning mode) | Draws a 3-tier app from blank without reading help |
+| Teacher | Writes scenarios and checks (learning mode, through a host) | Write a challenge (scenario + rules); see which rules each student met | Writes a challenge in 20 minutes; never grades the rule-checkable parts by eye |
 
-Research to do before M1 (method: 5 students, think-aloud, 20 minutes each, on the clickable mock):
-can they find a service without knowing its AWS name? do they understand zones (VPC, subnet) as containers?
-do they notice the AWS / open-source switch and use it?
+Research before M1 (5 people, think-aloud, 20 minutes each, on the clickable mock): can they find a service without
+knowing a vendor's name? do they read zones as containers? do they find and use "Show as"?
 
 ## 3. Principles
 
-1. **Role first, product second.** A node is "Relational database"; "Amazon RDS" or "PostgreSQL" is how it is shown.
-   Checks read the role, so either flavour is a correct answer.
-2. **Never stuck.** No blocking error dialogs. Every action can be undone; the diagram autosaves.
-3. **The diagram is the document.** One small, readable JSON format (section 6) that people, the checker and git can read.
-4. **Calm canvas, loud selection.** Pastel category fills, ink outlines; the green highlighter marks only what is active or selected.
-5. **3D that explains.** The canvas is isometric: services are blocks standing on a grid and zones are raised floor plates,
-   so "what is inside what" reads at a glance. Shape encodes kind (box runs code, cylinder keeps data, low box stores files,
-   plate is people or devices); colour encodes category. A flat top-down view of the same file is one click away.
-6. **Desktop first, phone usable.** Full editing with mouse and keyboard; on a phone you can view, move, add and rename.
-
-Look: soft neo-brutalism after designed-to-scale.vercel.app (warm paper, ink outlines, hard offset shadows, mono type,
-isometric blocks on a faint diagonal grid). Tokens, components and screens: `design/` (see `design/design-system.html`).
+1. **Neutral core, swappable packs.** The file stores roles and zone kinds; a pack decides names and icons. Changing the
+   pack never moves or loses anything. A role with no product in a pack shows its generic name and line icon.
+2. **Role first, product second.** A block reads as its name, then its product (`orders-db` over `RDS` or `PostgreSQL`).
+   Checks read roles, so any product is a correct answer.
+3. **3D that explains.** Shape is the kind (box runs code, cylinder keeps data, low box stores files, plate is people or
+   devices outside the system); colour is the category; the sticker on top is the product. A flat view is one click away.
+4. **Real icons, shown as they are.** Official AWS icons and project logos sit upright on a light sticker, never redrawn,
+   recoloured, cropped or skewed.
+5. **Never stuck.** No blocking dialogs; everything can be undone; the diagram autosaves.
+6. **The diagram is the document.** One small, readable JSON format (section 6) that people, checkers and git can read.
+7. **Fits the screen people have.** Designed at 1280 × 720 first and grows to large monitors (section 9).
 
 ## 4. Scope
 
-### v1 (M1 + M2) — the editor
-- Canvas: **3D (isometric) view by default**, with pan, zoom, fit, minimap. Blocks snap to grid cells; arrow keys move one cell
-  along a grid axis. **Rotate view** turns the camera in 90° steps so a block hidden behind another can be reached (the file
-  does not change). **Flat view** shows the same file from above, for dense diagrams and printing.
-- Blocks are drawn back to front (painter's order); connections run along the two grid axes with right-angle turns at half
-  block height; labels are pills on the longest straight part.
-- Palette of services by category, with search (finds by role, AWS name or open-source name: "s3", "minio", "bucket" all find Object storage). Drag onto the canvas, or select and press Enter to add at the centre.
-- **Zones** (containers): Region, VPC, Availability Zone, Subnet (public or private). Drop a node inside to put it in the zone; zones nest.
-- Edges: drag from a node's handle to another node. Kind: request (solid), async message (dashed), data replication/backup (dotted). Optional label ("HTTPS", "SQL", "S3 events").
-- Inspector for the selection: label, role, product (AWS / open source / a named alternative), zone, connections, notes.
-- Diagram-wide **flavour switch**: AWS ↔ Open source (renames every node at once; per-node override allowed).
-- Undo / redo (100 steps), duplicate, delete, multi-select (shift-click, drag box), align.
-- Keyboard: `A` add (opens palette search), `Del`, `Ctrl+Z` / `Ctrl+Shift+Z`, `Ctrl+D`, arrows nudge 8 px (Shift = 1 px), `Space`+drag pan, `F` fit, `?` shortcuts list.
+### v1 (M1) — the editor
+- **3D canvas** (isometric) with pan, zoom, fit, minimap. Blocks snap to grid cells; arrow keys move one cell along a grid
+  axis; **Rotate view** turns the camera in 90° steps (the file does not change); **Flat view** shows the file from above.
+- Blocks drawn back to front; outer edges rounded (5 px); connections along the grid axes with right-angle turns at half
+  block height; labels as pills on the longest straight part.
+- **Palette** by category; search reads every pack ("postgres", "rds", "sql" all find Relational database). Drag onto the
+  canvas, or select and press Enter to add at the centre. A **custom block** takes any name and a line icon.
+- **Zones**: region, network, failure zone, subnet (public or private), group. Drop a block inside to put it there; zones nest.
+- **Connections**: request (solid), async message (dashed), data (dotted), optional label.
+- **Inspector**: name, role, what each pack shows (and a product choice where a pack has several), zone, connections, notes.
+- **Show as** (icon pack): Generic, AWS, Open source. Per-block product override within a pack.
+- Undo / redo (100 steps), duplicate, delete, multi-select, align. Keyboard map in the design page.
 - Files: autosave in the browser; Open / Save as `.archboard.json`; Export PNG and SVG.
-- Templates: Blank, Static website, 3-tier web app, Serverless API, Event pipeline.
-- Light and dark themes; English UI (Khmer later).
+- Templates: Blank, Static website, 3-tier web app, Microservices, Serverless API, Event pipeline.
+- Light and dark themes; English UI.
 
 ### v1.5 (M2) — the Eraser-like layer
-- **Diagram as code.** A text panel beside the canvas (Split view), or full width (Code view). Text and canvas are two
-  views of one diagram: typing updates the canvas after a short pause; moving or adding on the canvas rewrites the text.
-  A line with an error is underlined with a plain message; the canvas keeps the last valid diagram meanwhile.
-  New nodes from text are placed by **auto-layout** (ELK, left to right); nodes already on the canvas keep their place.
+- **Diagram as code** in a text panel (Split view) or full width (Code view); text and canvas are two views of one diagram.
+  Typing updates the canvas after a short pause; canvas edits rewrite the text. An error is underlined on its line with a
+  plain message; the canvas keeps the last valid diagram. New blocks from text are placed by **auto-layout** (ELK).
   Syntax (ours, draft):
 
   ```text
-  title Course shop
-  flavour aws
+  title "Online shop"
+  show aws                       // pack: generic | aws | oss
 
   Customers: client
+  media: object-storage
 
-  vpc shop-vpc {
+  network shop-net {
     subnet public-a public {
-      web-alb: load-balancer
+      web-lb: load-balancer
     }
     subnet private-a private {
-      app-1: vm
-      orders-db: relational-db [product: mysql]
+      app-1, app-2: vm
+      orders-db: relational-db [product: postgresql]
     }
   }
 
-  Customers > web-alb "HTTPS"      // request
-  web-alb > app-1
-  app-1 > orders-db "SQL"
-  app-1 ~> jobs                    // async message
-  orders-db .> backups             // data / replication
+  Customers > web-lb "HTTPS"     // request
+  web-lb > app-1, app-2
+  app-1 ~> jobs                  // async message
+  orders-db .> media "backups"   // data
   ```
-- **Auto-layout** button for the whole diagram or a selected zone (tidy left-to-right or top-to-bottom).
-- **Notes**: a short Markdown document saved inside the diagram file (design rationale, assumptions), shown in a side panel.
-  For students this is where the "why" of a design goes.
-- **Present**: full-screen, chrome hidden, step through zones one by one.
-- **Share and embed** (when hosted): read-only link and `<iframe>` embed of a diagram.
+- **Auto-layout** for the whole diagram or one zone. **Notes**: a Markdown document inside the file. **Present** mode.
+- **Share and embed** (when hosted): read-only link and `<iframe>` embed.
 
-### Later (Eraser has these; not before the course needs them)
-- Generate a first draft from a text prompt with an AI model (needs an API key and a cost decision).
-- Sequence diagrams and ERDs in the same text syntax.
-- Real-time co-editing, comments.
-
-### v2 (M3) — learning
-- **Hints**: live, non-blocking notes from the rule engine ("Database is in a public subnet").
-- **Challenge mode**: a brief (scenario + required properties), the student's diagram, "Check my diagram" with a result per rule and a score.
-- Integration with labsite (section 8).
+### v2 (M3) — learning mode and packs
+- **Learning mode** (an add-on a host turns on): hints from the rule engine, a challenge brief, "Check" with a result per rule.
+- More packs: Google Cloud, Azure, Kubernetes, if their icons' terms allow (section 5).
 
 ### Later
-- Step-through mode: animate a request travelling along the edges (the reference site's idea).
-- Cost estimate per diagram; Terraform/CloudFormation export; real-time co-editing.
+Step-through mode (animate a request along the edges), cost estimate, Terraform export, AI first draft, real-time co-editing.
 
 ### Not doing
-- Deploying anything to a real cloud. Reading students' AWS accounts or credentials.
-- Free drawing (shapes, arrows not tied to services). Use a whiteboard for that.
+Deploying anything. Reading anyone's cloud account. Free drawing not tied to blocks (use a whiteboard for that).
 
-## 5. Service catalog (v1)
+## 5. Catalog and icon packs
 
-Each entry: role id, category, AWS product, open-source default (alternatives). **Licences to verify before M1:** Vault,
-Redis and Elasticsearch changed their licences in recent years (and some have since added an open-source option again), so
-the defaults below use their community forks (OpenBao, Valkey, OpenSearch) until each licence is checked from its source.
+The neutral catalog (roles, categories, block shapes) and the packs are generated by `tools/fetch_icons.py` into
+`design/icons/manifest.json` (and `catalog.js`). Sources, pins and licences: `design/icons/SOURCES.md`.
 
-| Role id | Category | AWS | Open source |
-|---|---|---|---|
-| `client` | Client | Users / browser | Users / browser |
-| `mobile` | Client | Mobile app | Mobile app |
-| `dns` | Network | Route 53 | CoreDNS (BIND) |
-| `cdn` | Network | CloudFront | Varnish |
-| `load-balancer` | Network | Elastic Load Balancing (ALB) | HAProxy (Nginx) |
-| `api-gateway` | Network | API Gateway | Kong |
-| `waf` | Security | AWS WAF | ModSecurity |
-| `nat` | Network | NAT gateway | Linux NAT (nftables) |
-| `vm` | Compute | EC2 instance | KVM virtual machine (OpenStack Nova) |
-| `autoscaling` | Compute | EC2 Auto Scaling group | Kubernetes HPA |
-| `containers` | Compute | ECS / Fargate | Docker (Nomad) |
-| `kubernetes` | Compute | EKS | Kubernetes |
-| `function` | Compute | Lambda | OpenFaaS (Knative) |
-| `object-storage` | Storage | S3 | MinIO (Ceph RGW) |
-| `block-storage` | Storage | EBS volume | Ceph RBD |
-| `file-storage` | Storage | EFS | NFS server |
-| `relational-db` | Database | RDS | PostgreSQL (MySQL, MariaDB) |
-| `nosql-db` | Database | DynamoDB | ScyllaDB (Cassandra, MongoDB) |
-| `cache` | Database | ElastiCache | Valkey (Memcached) |
-| `queue` | Messaging | SQS | RabbitMQ |
-| `pubsub` | Messaging | SNS | NATS |
-| `stream` | Messaging | Kinesis Data Streams | Apache Kafka |
-| `monitoring` | Observability | CloudWatch | Prometheus + Grafana |
-| `logs` | Observability | CloudWatch Logs | Loki (OpenSearch) |
-| `identity` | Security | IAM / Cognito | Keycloak |
-| `secrets` | Security | Secrets Manager | OpenBao |
-| `registry` | Compute | ECR | Harbor |
+**Roles (34):** users, mobile app, device, external system, web front end, service, batch job, DNS, CDN, load balancer,
+API gateway, web firewall, NAT, virtual machine, autoscaling group, containers, Kubernetes cluster, function, image
+registry, object / block / file storage, relational / NoSQL database, cache, search index, data warehouse, queue, pub/sub
+topic, event stream, monitoring, logs, identity, secrets.
 
-Zones: `region`, `vpc` (open source: "Private network"), `az` ("Failure domain / rack"), `subnet` with `access: public|private`.
+**Packs:**
 
-Icons in v1: our own simple line icons per role + the category colour + the text name. The official AWS
-Architecture Icons are **not** bundled until their terms of use have been read and accepted by the instructor.
+| Pack | Shows | Source and terms |
+|---|---|---|
+| Generic | Role name and our line icon | Ours |
+| AWS | The AWS product and its official icon (28 services, 5 zone icons) | AWS Architecture Icons, release 2026-07-31. AWS: "We allow customers and partners to use these toolkits and assets to create architecture diagrams." Shown unmodified. |
+| Open source | Projects under OSI-approved licences, with their logos (29 logos) | Logos from gilbarbara/logos (CC0, pinned commit), Simple Icons 16.38.0 (CC0) and cncf/artwork (CoreDNS, Linux Foundation trademark policy). Project licences read from each repository on 2026-11-20. |
+
+Left out of the Open source pack (licence not OSI-approved, read 2026-11-20): HashiCorp Nomad and Vault (BSL 1.1),
+ScyllaDB (source-available agreement, April 2026), MongoDB (SSPL), OpenFaaS CE (EULA, commercial use needs a licence).
+Redis is listed under its AGPLv3 option; Valkey is the default cache. Without a logo yet: Varnish, ModSecurity, Grafana Loki.
+
+Logos and product names are trademarks of their owners and are used only to name the products.
 
 ## 6. Diagram format v1
 
@@ -163,18 +134,18 @@ Architecture Icons are **not** bundled until their terms of use have been read a
 {
   "format": "archboard",
   "version": 1,
-  "title": "Course shop — 3-tier",
-  "flavour": "aws",
+  "title": "Online shop",
+  "show": "aws",
   "zones": [
-    { "id": "z1", "kind": "vpc", "label": "shop-vpc", "x": 3, "y": -0.5, "w": 13.5, "h": 11 },
+    { "id": "z1", "kind": "network", "label": "shop-net", "x": 3, "y": -0.5, "w": 13.5, "h": 11 },
     { "id": "z2", "kind": "subnet", "access": "public",  "label": "public-a",  "parent": "z1", "x": 3.8, "y": 0.5, "w": 3.8, "h": 9.2 },
     { "id": "z3", "kind": "subnet", "access": "private", "label": "private-a", "parent": "z1", "x": 8.6, "y": 0.5, "w": 7.2, "h": 9.2 }
   ],
   "nodes": [
     { "id": "n1", "role": "client", "label": "Customers", "x": 0, "y": 6 },
-    { "id": "n2", "role": "load-balancer", "label": "web-alb", "zone": "z2", "x": 5.7, "y": 6 },
+    { "id": "n2", "role": "load-balancer", "label": "web-lb", "zone": "z2", "x": 5.7, "y": 6 },
     { "id": "n3", "role": "vm", "label": "app-1", "zone": "z3", "x": 10.2, "y": 3 },
-    { "id": "n4", "role": "relational-db", "label": "orders-db", "zone": "z3", "x": 14, "y": 3, "product": "mysql" }
+    { "id": "n4", "role": "relational-db", "label": "orders-db", "zone": "z3", "x": 14, "y": 3, "product": { "oss": "postgresql" } }
   ],
   "edges": [
     { "id": "e1", "from": "n1", "to": "n2", "kind": "request", "label": "HTTPS" },
@@ -184,113 +155,124 @@ Architecture Icons are **not** bundled until their terms of use have been read a
 }
 ```
 
+- `show` is the pack the diagram opens in; it changes names and icons only.
+- Zone kinds: `region`, `network`, `zone` (failure zone), `subnet` (with `access`), `group`. Packs name them (AWS: VPC, Availability Zone).
 - Positions are **ground grid cells**, not pixels: a node's `x, y` is the centre of its footprint, a zone's `x, y, w, h` its
-  rectangle on the ground (halves allowed). The 3D view projects them isometrically (one cell = 34.64 px across, 20 px down
-  at 100%); the flat view draws them from above. So the file does not depend on the view, the zoom or the rotation.
-- A node's zone is stored, never inferred by the checker.
-- `product` overrides the flavour for one node; it must be a product listed for that role.
-- Never store React Flow's internal objects (selection, measured size…): the app converts both ways.
-- Limits (checked on open and on the server): 200 nodes, 400 edges, 40 zones, labels ≤ 60 characters, notes ≤ 500, file ≤ 256 KB.
-  Unknown fields are dropped; an unknown role or a dangling edge makes the file invalid with a message that names it.
-- A later version adds fields only; v1 files must always open.
+  rectangle on the ground (halves allowed). The 3D view projects them (one cell = 34.64 px across, 20 px down at 100%); the
+  flat view draws them from above. The file does not depend on the view, zoom or rotation.
+- `product` optionally picks a product per pack for one node (`{ "oss": "mysql" }`); it must be one the pack lists for that role.
+- A custom block is `{ "role": "custom", "icon": "<line icon name>", "label": "..." }`.
+- Never store view state (selection, measured sizes). Limits checked on open and on servers: 200 nodes, 400 edges, 40 zones,
+  labels ≤ 60 characters, notes ≤ 500, file ≤ 256 KB. Unknown fields are dropped; an unknown role or a dangling edge makes
+  the file invalid with a message that names it. Later versions only add fields; v1 files must always open.
 
-## 7. Rule engine (v2, sketch)
+## 7. Rule engine (learning mode, v2, sketch)
 
-A challenge is a scenario text plus a list of rules over roles, zones and edges, never over exact positions or labels:
+A challenge is a scenario plus rules over roles, zones and edges, never over positions, labels or packs:
 
 ```json
-{ "id": "r1", "points": 2, "text": "Traffic from users reaches the app through a load balancer",
-  "rule": { "path": ["client", "load-balancer", ["vm", "autoscaling", "containers", "kubernetes"]] } }
+{ "id": "r1", "points": 2, "text": "Users reach the app through a load balancer",
+  "rule": { "path": ["client", "load-balancer", ["vm", "service", "containers", "kubernetes"]] } }
 { "id": "r2", "points": 2, "text": "The database is not in a public subnet",
   "rule": { "placement": { "role": "relational-db", "notIn": { "kind": "subnet", "access": "public" } } } }
-{ "id": "r3", "points": 1, "text": "The app runs in at least two Availability Zones",
-  "rule": { "spread": { "roles": ["vm"], "zoneKind": "az", "min": 2 } } }
+{ "id": "r3", "points": 1, "text": "The app runs in at least two failure zones",
+  "rule": { "spread": { "roles": ["vm", "service"], "zoneKind": "zone", "min": 2 } } }
 { "id": "r4", "points": 1, "text": "Users never talk to the database directly",
   "rule": { "noEdge": { "from": "client", "to": "relational-db" } } }
 ```
 
-Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. The server (Python, in labsite) is the judge;
-a TypeScript copy gives live hints. Both read one shared file of test cases (the pattern of labsite's `tests/game_cases.json`).
+Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. A server (Python) is the judge; a TypeScript copy
+gives live hints. Both read one shared file of test cases.
 
-## 8. Integration: embed API and checker API (v2)
+## 8. Integration: embed API and checker API
 
-The editor owns the editor, the diagram format, the rules and the checker. A host (labsite, the student portal,
-any other site) owns accounts, deadlines and marks. They meet through two small, versioned APIs; neither imports
-the other's code.
+The editor owns the editor, the format, the packs, the rules and the checker. A host owns people, deadlines and marks.
+They meet through two small, versioned APIs; neither imports the other's code.
 
 ```
- Host page (labsite /cc/challenge/...)                 Archboard (own origin, e.g. editor.<domain>)
- ┌──────────────────────────────────────┐   postMessage   ┌──────────────────────────────┐
- │ brief, deadline, "Hand in" button     │ ─────────────▶ │ <iframe> editor in host mode  │
- │                                      │ ◀───────────── │  ready / change / submit      │
- └───────────────┬──────────────────────┘                └──────────────────────────────┘
+ Host page                                            Archboard (own origin)
+ ┌──────────────────────────────────┐   postMessage   ┌──────────────────────────────┐
+ │ brief, deadline, "Hand in"        │ ─────────────▶ │ <iframe> editor              │
+ │                                  │ ◀───────────── │  ready / change / submit      │
+ └───────────────┬──────────────────┘                └──────────────────────────────┘
                  │ server to server: POST /v1/check {diagram, ruleset} → {results, score}
                  ▼
-          Archboard checker service (stateless)  — or the same checker as a Python package
+          Archboard checker service (stateless), or the same checker as a Python package
 ```
 
-### 8.1 Embed API (plugin)
-- **Iframe embed** (any host, any framework): `https://<editor>/embed?mode=edit|view|challenge&origin=<host origin>`.
-  Messages are JSON with `{type, v: 1, ...}`, sent only to the declared host origin and accepted only from it:
-  - host → editor: `load {diagram, readOnly, brief?, rules?}`, `setTheme {light|dark}`, `requestSave`.
-  - editor → host: `ready`, `change {diagram, dirty}` (debounced), `save {diagram}`, `submit {diagram}`, `hints {results}` (challenge mode).
-- **JS mount** (same-origin hosts that want it inside their page): `Archboard.mount(element, {diagram, mode, onChange, onSubmit})`
-  from a single ES module + CSS, no global React needed by the host. Iframe is the default; mount is optional.
-- The editor never talks to a host's server itself and never sees a student's identity: the host decides who saves what.
+### 8.1 Embed API
+- `https://<editor>/embed?mode=edit|view|learn&origin=<host origin>`. Messages are JSON `{type, v: 1, ...}`, sent only to the
+  declared host origin and accepted only from it.
+  - host → editor: `load {diagram, readOnly, show?, packs?, brief?, rules?}`, `setTheme`, `requestSave`.
+  - editor → host: `ready`, `change {diagram, dirty}` (debounced), `save {diagram}`, `submit {diagram}`, `hints {results}`.
+- A host may limit the packs offered (`packs: ["generic", "oss"]`).
+- Optional JS mount for same-origin hosts: `Archboard.mount(element, {diagram, mode, onChange, onSubmit})`.
+- The editor never calls a host's server and never sees a person's identity.
 
 ### 8.2 Checker API
-- `POST /v1/check` with `{diagram, ruleset}` → `{valid, results: [{id, pass, points, message}], score, max}`.
-  Stateless, no storage, no accounts; limits as in section 6; rejects anything that fails validation.
-- The same checker ships as a **Python package** (`archboard-check`) so a host like labsite can run it in-process instead
-  of calling the service, and as a TypeScript module for live hints in the browser. One shared file of test cases keeps
-  the three identical.
-- **The host's server is the judge.** It re-checks the diagram it stored; it never trusts a score sent from the browser.
+- `POST /v1/check` `{diagram, ruleset}` → `{valid, results: [{id, pass, points, message}], score, max}`; stateless.
+- Also a Python package (`archboard-check`) and a TypeScript module; one shared test file keeps them identical.
+- **The host's server is the judge**; a score sent from a browser is never trusted.
 
-### 8.3 What labsite adds on its side (not in this project)
-A course `cc`, a challenge page that embeds the editor, routes that store drafts and hand-ins and call the checker,
-and the score through its `store()` so deadlines, late rules, XP and the lecturer table work as for any lab — following
-labsite's own rules (hidden until published, server-side validation, no student id in addresses, a numbered migration, tests).
+### 8.3 First host: the course lab site (work done in labsite, not here)
+A course page embeds the editor in learning mode, stores drafts and hand-ins, calls the checker, and sends the score
+through its own rules (deadlines, late work, marks), following labsite's CLAUDE.md.
 
-## 9. Quality bar
+## 9. Screens and quality bar
 
-- First paint < 1.5 s on a classroom laptop; 150 nodes pan and zoom at 60 fps.
-- WCAG 2.2 AA colour contrast in both themes; every action reachable by keyboard; visible focus; `prefers-reduced-motion` respected.
+Designed for 16:9 laptops and monitors. The editor's layout answers its own size (container queries), so it works the same
+embedded in a narrower host page.
+
+| Screen | Size the editor gets | Layout |
+|---|---|---|
+| 15.6" Full HD laptop at 150% scaling | 1280 × 720 (smallest supported for editing) | Palette as a 64 px icon rail, inspector 288 px, icon-only view switch, "Show as" as a select, 48 px bars, no minimap |
+| 15.6" HD laptop | 1366 × 768 | Palette 240 px, inspector 296 px, icon-only view switch, compact bars |
+| 15.6" Full HD laptop at 125% | 1536 × 864 | Palette 240 px, inspector 296 px, "Show as" select, minimap |
+| 22"–24" Full HD monitor (e.g. Dell 22") | 1920 × 1080 | Full layout: palette 264 px, inspector 320 px |
+| 27" QHD monitor | 2560 × 1440 | Full layout; extra space goes to the canvas |
+| Below 1024 px wide | tablet, phone | Canvas full screen; palette and inspector as bottom sheets |
+
+- First paint < 1.5 s on a classroom laptop; 150 blocks pan and zoom smoothly at 1280 × 720.
+- WCAG 2.2 AA contrast in both themes; every action reachable by keyboard; visible focus; `prefers-reduced-motion` respected.
 - No sideways page scroll at any width (the canvas pans inside itself).
-- Works offline once loaded; no third-party requests (fonts bundled).
+- Works offline once loaded; no third-party requests (fonts and icons bundled).
 
 ## 10. Stack (planned)
 
-Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix) for the panels and controls, zod, Vitest.
+Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix) for panels and controls, zod, Vitest.
 
 **Canvas renderer: our own SVG scene, no Three.js, no React Flow.** An isometric view is a fixed 2D projection, so plain SVG
-draws it exactly (the reference site does not use Three.js either); `design/design-system.html` already contains a working prototype of
-the block, cylinder, plate, zone and connection drawing. Three.js would only pay off for free camera orbit or perspective, which
-the spec does not want, and it adds about 150 KB and a harder accessibility story. React Flow (the earlier plan) assumes
-rectangular nodes in screen space and would have to be fought for diamond footprints, painter's order and grid-axis routing.
-Pan and zoom: `d3-zoom` (small, framework-free); everything else (hit testing in ground cells, drag with snap, box select,
-routing) is our code over the diagram model. Export: SVG directly, PNG by drawing that SVG to a canvas.
-Code panel: CodeMirror 6 with a small grammar for our syntax; auto-layout: elkjs (in a Web Worker).
-Checker service: a small Python (FastAPI or Flask) app around the `archboard-check` package; deployable as one container.
-Fonts bundled with `@fontsource` (JetBrains Mono for the interface, IBM Plex Sans for long text). The editor is its own app with its own React; hosts
-embed it by iframe, so their stack does not matter.
+draws it exactly (the reference site does not use Three.js either); `design/design-system.html` contains a working prototype
+of the block, cylinder, plate, zone, sticker and connection drawing. Three.js would only pay off for free camera orbit or
+perspective. React Flow assumes rectangular nodes in screen space and would have to be fought for diamond footprints,
+painter's order and grid-axis routing. Pan and zoom: `d3-zoom`. Hit testing in ground cells, drag with snap, box select,
+connecting, routing and keyboard access are our code: **the largest cost of M1**. Export: SVG directly, PNG via a canvas.
+
+Code panel: CodeMirror 6 with a small grammar; auto-layout: elkjs in a Web Worker. Checker service: a small Python app around
+`archboard-check`, one container. Fonts bundled with `@fontsource` (JetBrains Mono, IBM Plex Sans). Icons from
+`tools/fetch_icons.py`, cleaned through an allowlist before they are bundled.
 
 ## 11. Milestones
 
 | | What | Done when |
 |---|---|---|
-| M0 | Spec, design system, key screens (this) | Instructor approves the look and the scope |
-| M1 | Editor core: 3D canvas (SVG renderer, pan/zoom, drag with snap, painter's order), palette, zones, connections, inspector, undo, files, templates, themes | A student draws the 3-tier template from blank; the JSON round-trips |
-| M2 | Diagram as code with two-way sync, auto-layout, notes, flavour switch, keyboard map, phone sheets, PNG/SVG export, accessibility pass | Text → canvas → text keeps the same diagram; checklist in section 9 passes |
-| M3 | Rule engine (TS + Python), hints, challenge mode, embed API, checker API | A test host page embeds the editor and gets a server-side score |
-| M4 | labsite course `cc` uses the embed + checker (work done in labsite) | One real challenge used in class |
+| M0 | Spec, design system, key screens, icon packs (this) | The instructor approves the look and the scope |
+| M1 | Editor core: 3D canvas, palette, zones, connections, inspector, packs, undo, files, templates, themes, responsive layout | Someone draws the 3-tier template from blank at 1280 × 720; the JSON round-trips; pack switching loses nothing |
+| M2 | Diagram as code with two-way sync, auto-layout, notes, flat view, export, accessibility pass | Text → canvas → text keeps the same diagram; section 9 passes |
+| M3 | Learning mode, rule engine (TS + Python), embed API, checker API | A test host page embeds the editor and gets a server-side score |
+| M4 | First host: labsite course page (work in labsite) | One real challenge used in class |
 
 ## 12. Open decisions
 
 1. Product name (working name "Archboard").
-2. Bundle the official AWS Architecture Icons? Needs the terms read first.
-3. Flavour per diagram (planned) or per node only?
-4. Where it is hosted (needed for the iframe embed): GitHub Pages, Vercel, or the same server as labsite under its own subdomain?
-5. UI language: English only, or English + Khmer from M2?
-6. Text syntax: approve the draft in section 4 (v1.5) before M2.
-7. AI draft from a prompt: wanted at all, and who pays for the model calls?
-8. Block artwork: our simple line icons on the top face (planned), or richer illustrated blocks per service later?
+2. AWS icon files: commit them to the public repository, or keep fetching them at build time (now git-ignored).
+3. Hosting (needed for the iframe embed): GitHub Pages, Vercel, or a server with its own subdomain.
+4. More packs (Google Cloud, Azure, Kubernetes): which, and after reading whose icon terms.
+5. Text syntax: approve the draft in section 4 before M2.
+6. AI first draft from a prompt: wanted, and who pays for the model calls?
+7. UI language: English only, or more languages later.
+
+Decided by the instructor (2026-11-20): separate project; plan and design first; soft neo-brutalism with the reference
+site's look and 3D blocks; Eraser-like features; integration only through an API or plugin; small rounded edges on blocks;
+real product icons; **generic for any system architecture, not tied to AWS or one course**; built for 16:9 laptops
+(15.6") and monitors (22" and up).
