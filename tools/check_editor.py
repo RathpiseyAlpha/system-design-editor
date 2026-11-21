@@ -275,6 +275,19 @@ try:
     bad = next((n for n in d["nodes"] if n["label"] == "bad"), None)
     check("the fix button corrects the text and the block appears", bad is not None and bad["role"] == "relational-db")
 
+    # A rename typed in the text keeps the block: same id, same place (decision 26).
+    worker = next(n for n in d["nodes"] if n["label"] == "worker")
+    p.js("""const line = [...document.querySelectorAll('.cm-line')].find(l => l.textContent.startsWith('worker:'));
+        const t = line.firstChild.nodeType === 3 ? line.firstChild : line.firstChild.firstChild;
+        const r = document.createRange(); r.setStart(t, 0); r.setEnd(t, 6);
+        const s = getSelection(); s.removeAllRanges(); s.addRange(r);""")
+    time.sleep(0.2)
+    p.call("Input.insertText", text="jobs")
+    time.sleep(0.6)
+    d = saved(p)
+    jobs = next((n for n in d["nodes"] if n["label"] == "jobs"), None)
+    check("renaming a block in the text keeps its id and place", jobs is not None and (jobs["id"], jobs["x"], jobs["y"]) == (worker["id"], worker["x"], worker["y"]) and not any(n["label"] == "worker" for n in d["nodes"]), json.dumps(jobs))
+
     p.js("document.querySelector('[data-block=\"n6\"]').focus();")
     key(p, "Delete")
     time.sleep(0.8)

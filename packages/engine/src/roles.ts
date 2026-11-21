@@ -27,16 +27,21 @@ export function roleInfo(id: string): RoleInfo {
 
 /** The closest role id to a mistyped one, for "Did you mean ...?" messages; null when nothing is close. */
 export function nearestRole(id: string): string | null {
+  return nearest(id.toLowerCase(), Object.keys(ROLES), Math.max(2, Math.floor(id.length / 4)));
+}
+
+/** The option closest to `word` by edit distance, if it is at most `limit` edits away; the first one wins a tie. */
+export function nearest(word: string, options: Iterable<string>, limit: number): string | null {
   let best: string | null = null;
   let bestD = Infinity;
-  for (const r of Object.keys(ROLES)) {
-    const d = distance(id.toLowerCase(), r);
+  for (const o of options) {
+    const d = distance(word, o);
     if (d < bestD) {
       bestD = d;
-      best = r;
+      best = o;
     }
   }
-  return bestD <= Math.max(2, Math.floor(id.length / 4)) ? best : null;
+  return bestD <= limit ? best : null;
 }
 
 function distance(a: string, b: string): number {

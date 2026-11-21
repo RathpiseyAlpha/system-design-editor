@@ -135,6 +135,69 @@ describe('diagram as code: merging keeps what the text does not say', () => {
   });
 });
 
+describe('diagram as code: a rename in the text is a rename', () => {
+  it('a renamed block keeps its id, place, notes and capacity, and its connections', () => {
+    const d = fromTemplate('three-tier');
+    const db = d.nodes.find((n) => n.label === 'orders-db')!;
+    db.notes = 'nightly backup';
+    db.sim = { instances: 2 };
+    const before = d.edges.filter((e) => e.from === db.id || e.to === db.id);
+    const r = applyText(d, printText(d).replaceAll('orders-db', 'orders'));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.diagram.nodes.find((n) => n.id === db.id)).toEqual({ ...db, label: 'orders' });
+    expect(r.diagram.nodes).toHaveLength(d.nodes.length);
+    expect(r.diagram.edges.filter((e) => e.from === db.id || e.to === db.id)).toEqual(before);
+  });
+
+  it('a renamed zone keeps its id and rectangle, and the blocks in it stay where they are', () => {
+    const d = fromTemplate('three-tier');
+    const net = d.zones.find((z) => z.label === 'shop-net')!;
+    const r = applyText(d, printText(d).replace('network shop-net {', 'network store-net {'));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.diagram).toEqual({ ...d, zones: d.zones.map((z) => (z.id === net.id ? { ...z, label: 'store-net' } : z)) });
+  });
+
+  it('a renamed zone and a renamed block inside it, in one change', () => {
+    const d = fromTemplate('three-tier');
+    const r = applyText(d, printText(d).replace('subnet private-a private {', 'subnet app-tier private {').replaceAll('sessions', 'kv'));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.diagram.nodes.map((n) => [n.id, n.x, n.y, n.zone])).toEqual(d.nodes.map((n) => [n.id, n.x, n.y, n.zone]));
+  });
+
+  it('two renames in the same zone and role pair in order', () => {
+    const d = fromTemplate('three-tier');
+    const [a1, a2] = ['app-1', 'app-2'].map((l) => d.nodes.find((n) => n.label === l)!);
+    const r = applyText(d, printText(d).replaceAll('app-1', 'web-1').replaceAll('app-2', 'web-2'));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.diagram.nodes.find((n) => n.id === a1!.id)?.label).toBe('web-1');
+    expect(r.diagram.nodes.find((n) => n.id === a2!.id)?.label).toBe('web-2');
+  });
+
+  it('a removal and an addition of another role, or uneven counts, stay a removal and an addition', () => {
+    const d = fromTemplate('three-tier');
+    const old = d.nodes.find((n) => n.label === 'sessions')!; // a cache
+    const other = applyText(d, printText(d).replace('sessions: cache', 'jobs: queue').replace('app-2 > sessions\n', ''));
+    expect(other.ok && other.diagram.nodes.some((n) => n.id === old.id)).toBe(false);
+    // Two app servers removed, one added: which one was renamed is not known, so neither is kept.
+    const text = printText(d).replace('    app-1: vm\n    app-2: vm\n', '    web: vm\n').replace(/^.*app-[12].*\n/gm, '');
+    expect(text).toContain('    web: vm\n');
+    const uneven = applyText(d, text);
+    expect(uneven.ok).toBe(true);
+    if (uneven.ok) expect(uneven.diagram.nodes.filter((n) => ['n3', 'n4'].includes(n.id))).toEqual([]);
+  });
+
+  it('a connection still using the old name offers the new one', () => {
+    const r = parseText('orders: relational-db\napi: service\napi > orders-db');
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errors[0]).toMatchObject({ line: 3, message: 'No block is called "orders-db". Did you mean "orders"?', fix: { insert: 'orders' } });
+  });
+});
+
 describe('diagram as code: errors on their line, with a fix when there is one', () => {
   const errs = (text: string) => { const r = parseText(text); return r.ok ? [] : r.errors; };
 

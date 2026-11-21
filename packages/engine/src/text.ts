@@ -15,7 +15,7 @@
 //
 // Names are unquoted when they are letters, digits, - _ and . (not starting with .), otherwise "quoted". Two blocks with the
 // same name are told apart with [id: n3], and a connection reaches them with @n3. Comments run from // to the end of the line.
-import { isRole, nearestRole, roleInfo, ZONE_KIND_IDS, type ZoneKind } from './roles.ts';
+import { isRole, nearest, nearestRole, roleInfo, ZONE_KIND_IDS, type ZoneKind } from './roles.ts';
 import { emptyDiagram, nextId, type Diagram, type DEdge, type DNode, type DZone, type EdgeKind } from './format.ts';
 
 export interface TextError {
@@ -207,7 +207,13 @@ export function parseText(text: string): TextResult {
   for (const e of doc.edges) {
     for (const r of [e.from, e.to]) {
       if (r.byId ? !ids.has(r.name) : !names.has(r.name)) {
-        errors.push({ line: r.line, from: r.from, to: r.to, message: r.byId ? `No block has the id "${r.name}".` : `No block is called "${r.name}". Declare it first, for example "${r.name}: service".` });
+        // After a rename in the text, the old name is still in the connections: offer the declared name closest to it.
+        const near = r.byId ? null : nearest(r.name, names, Math.min(r.name.length - 1, Math.max(3, Math.ceil(r.name.length / 2))));
+        errors.push({
+          line: r.line, from: r.from, to: r.to,
+          message: r.byId ? `No block has the id "${r.name}".` : near ? `No block is called "${r.name}". Did you mean "${near}"?` : `No block is called "${r.name}". Declare it first, for example "${r.name}: service".`,
+          ...(near ? { fix: { label: `Use ${near}`, insert: quoteName(near) } } : {}),
+        });
       } else if (!r.byId && dupNames.has(r.name)) {
         errors.push({ line: r.line, from: r.from, to: r.to, message: `Two blocks are called "${r.name}": say which with @ and its id, for example @${doc.blocks.find((b) => b.name === r.name && b.id)?.id ?? 'n1'}.` });
       }
@@ -260,21 +266,53 @@ const SIZE: Record<ZoneKind, [number, number]> = { region: [16, 12], network: [1
 const RADIUS = 1.3; // room around a block inside a zone
 
 /**
+ * Pair what the match by name left over, as renames: within each group (same key), the k-th old item in file order goes
+ * with the k-th new item in text order, but only when the group has as many old items as new ones. When the counts differ
+ * (a rename and a removal in the same place) no pairing can be trusted, so those stay removals and additions.
+ */
+function pairRenames<O, T>(olds: O[], news: T[], keyOld: (o: O) => string, keyNew: (t: T) => string): Map<T, O> {
+  const groupsO = new Map<string, O[]>(), groupsN = new Map<string, T[]>();
+  for (const o of olds) groupsO.set(keyOld(o), [...(groupsO.get(keyOld(o)) ?? []), o]);
+  for (const t of news) groupsN.set(keyNew(t), [...(groupsN.get(keyNew(t)) ?? []), t]);
+  const out = new Map<T, O>();
+  for (const [k, ts] of groupsN) {
+    const os = groupsO.get(k);
+    if (os && os.length === ts.length) ts.forEach((t, i) => out.set(t, os[i]!));
+  }
+  return out;
+}
+
+/**
  * Apply parsed text to a diagram. What the text names keeps its id, position and everything the text does not say
  * (notes, capacity settings, products of other packs); new names become new blocks, zones and connections; names the text
- * no longer has are removed (a rename is a removal and an addition). The text decides what is inside what: blocks and
- * zones are moved into the zone the text puts them in, and zones grow to hold what they contain.
+ * no longer has are removed. A rename in the text is a rename: a block the text no longer names and a new name of the same
+ * role in the same zone are the same block (zones: same kind, same parent), when that pairing is unambiguous (see
+ * pairRenames). The text decides what is inside what: blocks and zones are moved into the zone the text puts them in, and
+ * zones grow to hold what they contain.
  */
 export function mergeText(current: Diagram, doc: TextDoc): Diagram {
   let d: Diagram = { ...emptyDiagram(), ...current, title: doc.title ?? current.title, show: doc.show ?? current.show, nodes: [], zones: [], edges: [] };
 
-  // Zones: match by kind and name, in order.
+  // Zones: match by kind and name, in order; then renames, outer zones first (a zone's parent must be settled first).
   const usedZ = new Set<string>();
-  const zoneIds: string[] = [];
-  for (const tz of doc.zones) {
+  const zMatch: (DZone | undefined)[] = doc.zones.map((tz) => {
     const old = current.zones.find((z) => !usedZ.has(z.id) && z.kind === tz.kind && z.label === tz.name);
-    const id = old ? old.id : nextId({ ...d, zones: [...d.zones, ...current.zones.filter((z) => !usedZ.has(z.id))] } as Diagram, 'z');
-    usedZ.add(id);
+    if (old) usedZ.add(old.id);
+    return old;
+  });
+  const zDepth = (i: number) => { let n = 0, p = doc.zones[i]!.parent; while (p !== null && n < 40) { n++; p = doc.zones[p]!.parent; } return n; };
+  const known = new Set(current.zones.map((z) => z.id));
+  const parentKey = (p: number | null) => (p === null ? '' : zMatch[p]?.id ?? `new:${p}`);
+  for (let depth = 0, max = Math.max(-1, ...doc.zones.map((_, i) => zDepth(i))); depth <= max; depth++) {
+    const left = doc.zones.map((_, i) => i).filter((i) => !zMatch[i] && zDepth(i) === depth);
+    const pairs = pairRenames(current.zones.filter((z) => !usedZ.has(z.id)), left,
+      (z) => `${z.kind}|${z.parent !== undefined && known.has(z.parent) ? z.parent : ''}`, (i) => `${doc.zones[i]!.kind}|${parentKey(doc.zones[i]!.parent)}`);
+    for (const [i, z] of pairs) { zMatch[i] = z; usedZ.add(z.id); }
+  }
+  const zoneIds: string[] = [];
+  for (const [i, tz] of doc.zones.entries()) {
+    const old = zMatch[i];
+    const id = old ? old.id : nextId({ ...d, zones: [...d.zones, ...current.zones] } as Diagram, 'z');
     zoneIds.push(id);
     const parent = tz.parent === null ? undefined : zoneIds[tz.parent];
     const [w, h] = SIZE[tz.kind];
@@ -284,14 +322,22 @@ export function mergeText(current: Diagram, doc: TextDoc): Diagram {
     d.zones.push({ ...base, label: tz.name, kind: tz.kind, ...(tz.access ? { access: tz.access } : {}), ...(parent ? { parent } : {}) });
   }
 
-  // Blocks: match by id attribute, else by name, in order.
+  // Blocks: match by id attribute, else by name, in order; then renames (same role, same zone).
   const usedN = new Set<string>();
+  const nMatch: (DNode | undefined)[] = doc.blocks.map((tb) => {
+    const old = (tb.id ? current.nodes.find((n) => n.id === tb.id && !usedN.has(n.id)) : undefined) ?? current.nodes.find((n) => !usedN.has(n.id) && n.label === tb.name);
+    if (old) usedN.add(old.id);
+    return old;
+  });
+  const leftN = doc.blocks.map((_, i) => i).filter((i) => !nMatch[i]);
+  const renamedN = pairRenames(current.nodes.filter((n) => !usedN.has(n.id)), leftN,
+    (n) => `${n.role}|${n.zone !== undefined && known.has(n.zone) ? n.zone : ''}`, (i) => { const tb = doc.blocks[i]!; return `${tb.role}|${tb.zone === null ? '' : zoneIds[tb.zone]}`; });
+  for (const [i, n] of renamedN) { nMatch[i] = n; usedN.add(n.id); }
   const nodeIdOf = new Map<string, string>(); // text name (or @id) -> node id
   const fresh: string[] = [];
-  for (const tb of doc.blocks) {
-    const old = (tb.id ? current.nodes.find((n) => n.id === tb.id && !usedN.has(n.id)) : undefined) ?? current.nodes.find((n) => !usedN.has(n.id) && n.label === tb.name);
+  for (const [i, tb] of doc.blocks.entries()) {
+    const old = nMatch[i];
     const id = old ? old.id : tb.id && !current.nodes.some((n) => n.id === tb.id) && !d.nodes.some((n) => n.id === tb.id) ? tb.id : nextId({ ...d, nodes: [...d.nodes, ...current.nodes] } as Diagram, 'n');
-    usedN.add(id);
     nodeIdOf.set(tb.id ? `@${tb.id}` : tb.name, id);
     if (tb.id) nodeIdOf.set(`@${tb.id}`, id);
     if (!nodeIdOf.has(tb.name)) nodeIdOf.set(tb.name, id);
