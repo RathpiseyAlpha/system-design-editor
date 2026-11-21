@@ -56,16 +56,20 @@ def big_diagram(n=150):
 
 
 def frames(p):
-    p.js("window.__f=[]; window.__on=true; const t=(ts)=>{ if(!window.__on) return; window.__f.push(ts); requestAnimationFrame(t); }; requestAnimationFrame(t);")
+    """Time every frame from now on. Each run has its own generation, so a loop left over from the last run stops at once."""
+    p.js("""window.__gen=(window.__gen||0)+1; const g=window.__gen; window.__f=[];
+            const t=(ts)=>{ if(window.__gen!==g) return; window.__f.push(ts); requestAnimationFrame(t); }; requestAnimationFrame(t);""")
 
 
 def stop_frames(p):
-    f = p.js("window.__on=false; return window.__f;") or []
+    f = p.js("window.__gen++; return window.__f;") or []
+    time.sleep(0.1)
     gaps = [b - a for a, b in zip(f, f[1:])]
     if not gaps:
-        return 999, 999, 0
+        return 999, 999, 0, 0
+    span = (f[-1] - f[0]) / 1000
     gaps.sort()
-    return statistics.median(gaps), gaps[int(len(gaps) * 0.95) - 1 if len(gaps) > 1 else 0], len(gaps)
+    return statistics.median(gaps), gaps[max(0, int(len(gaps) * 0.95) - 1)], len(gaps), span
 
 
 def empty_point(p):
@@ -83,8 +87,95 @@ def run_axe(p, tag):
     if not p.js("return !!window.axe;"):
         p.call("Runtime.evaluate", expression=AXE)
     r = p.js("""const r = await axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}});
-              return r.violations.map(v => ({id: v.id, n: v.nodes.length, where: v.nodes.slice(0,3).map(n => n.target.join(' ') + (n.any[0] ? ' | ' + n.any[0].message : ''))}));""")
-    check(f"{tag}: no WCAG 2.2 AA problems found by axe", not r, json.dumps(r)[:900])
+              const short = (v) => ({id: v.id, n: v.nodes.length, where: v.nodes.slice(0,3).map(n => n.target.join(' ') + (n.any[0] ? ' | ' + n.any[0].message : ''))});
+              return {bad: r.violations.map(short), unsure: r.incomplete.filter(v => v.id === 'color-contrast').flatMap(v => v.nodes.filter(n => !n.target.join(' ').includes('svg')).map(n => n.target.join(' ')))};""")
+    check(f"{tag}: no WCAG 2.2 AA problems found by axe", not r["bad"], json.dumps(r["bad"])[:900])
+    if r["unsure"]:
+        m = p.js("const SELECTORS = " + json.dumps(r["unsure"]) + ";" + PAGE_CONTRAST)
+        check(f"{tag}: text axe could not decide reaches AA contrast (measured here)", not m["bad"], f"{m['n']} texts; " + "; ".join(m["bad"][:5]))
+
+
+CANVAS_CONTRAST = r"""
+  // axe cannot tell what is behind SVG text, so measure it here: the colour of each text on the canvas against the shapes
+  // under its middle (composited from the top down, ending on the canvas paper).
+  const parse = (c) => {
+    if (!c || c === 'none') return null;
+    let m = c.match(/^rgba?\(([^)]+)\)/);
+    if (m) { const v = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; }
+    m = c.match(/^color\(srgb ([^)]+)\)/);
+    if (m) { const v = m[1].split(/[ /]+/).filter(Boolean).map(Number); return [v[0] * 255, v[1] * 255, v[2] * 255, v.length > 3 ? v[3] : 1]; }
+    return null;
+  };
+  const lum = ([r, g, b]) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const paper = parse(getComputedStyle(document.querySelector('.canvas')).backgroundColor) || [243, 236, 225, 1];
+  const bad = []; let n = 0;
+  // A text's own letters, and each tspan (a zone tab's kind, "public subnet", is a tspan in its own colour).
+  for (const t of document.querySelectorAll('svg.iso text, svg.iso tspan')) {
+    if (![...t.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim()) || !t.getClientRects().length) continue;
+    const s = getComputedStyle(t), fg = parse(s.fill);
+    if (!fg || parseFloat(s.opacity) === 0) continue;
+    const r = t.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    // Shapes under the text, top first; text itself and things that let the pointer through are skipped by the browser.
+    const layers = document.elementsFromPoint(x, y).filter((e) => e !== t && !t.contains(e) && e.closest('svg.iso') && ['rect', 'path', 'polygon', 'circle', 'ellipse'].includes(e.tagName));
+    let col = null, keep = 1, acc = [0, 0, 0];
+    for (const e of layers) {
+      const es = getComputedStyle(e), f = parse(es.fill);
+      if (!f) continue;
+      const a = f[3] * parseFloat(es.fillOpacity || '1') * parseFloat(es.opacity || '1');
+      if (a <= 0) continue;
+      for (let i = 0; i < 3; i++) acc[i] += keep * a * f[i];
+      keep *= 1 - a;
+      if (keep < 0.01) break;
+    }
+    col = acc.map((v, i) => v + keep * paper[i]);
+    const size = parseFloat(s.fontSize), bold = parseInt(s.fontWeight, 10) >= 700, large = size >= 24 || (bold && size >= 18.66);
+    const need = large ? 3 : 4.5, got = ratio(fg, col);
+    n++;
+    if (got < need) bad.push(`${t.textContent.trim().slice(0, 18)} ${got.toFixed(2)} (${s.fill} on rgb(${col.map(Math.round).join(',')}))`);
+  }
+  return {n, bad};
+"""
+
+
+PAGE_CONTRAST = r"""
+  // Text outside the canvas that axe left undecided (it gives up on some backgrounds): the text colour against the first
+  // solid background colour up its ancestors (semi-transparent ones composited on the way).
+  const parse = (c) => {
+    let m = c && c.match(/^rgba?\(([^)]+)\)/);
+    if (m) { const v = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; }
+    m = c && c.match(/^color\(srgb ([^)]+)\)/);
+    if (m) { const v = m[1].split(/[ /]+/).filter(Boolean).map(Number); return [v[0] * 255, v[1] * 255, v[2] * 255, v.length > 3 ? v[3] : 1]; }
+    return null;
+  };
+  const lum = ([r, g, b]) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const bad = []; let n = 0;
+  for (const sel of SELECTORS) for (const el of document.querySelectorAll(sel)) {
+    const own = [el, ...el.querySelectorAll('*')].filter((e) => [...e.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim()) && e.getClientRects().length);
+    for (const e of own) {
+      if (e.closest('svg')) continue;
+      const s = getComputedStyle(e), fg = parse(s.color);
+      let acc = [0, 0, 0], keep = 1;
+      for (let a = e; a && keep > 0.01; a = a.parentElement) {
+        const b = parse(getComputedStyle(a).backgroundColor);
+        if (!b || b[3] === 0) continue;
+        for (let i = 0; i < 3; i++) acc[i] += keep * b[3] * b[i];
+        keep *= 1 - b[3];
+      }
+      const bg = acc.map((v) => v + keep * 255);
+      const size = parseFloat(s.fontSize), large = size >= 24 || (parseInt(s.fontWeight, 10) >= 700 && size >= 18.66);
+      const got = ratio(fg, bg); n++;
+      if (got < (large ? 3 : 4.5)) bad.push(`${e.textContent.trim().slice(0, 18)} ${got.toFixed(2)} (${s.color} on rgb(${bg.map(Math.round).join(',')}))`);
+    }
+  }
+  return {n, bad};
+"""
+
+
+def canvas_contrast(p, tag):
+    r = p.js(CANVAS_CONTRAST)
+    check(f"{tag}: every text on the canvas reaches AA contrast", r["n"] > 5 and not r["bad"], f"{r['n']} texts; " + "; ".join(r["bad"][:5]))
 
 
 def wait_for(p, cond, tries=40, step=0.25):
@@ -148,8 +239,10 @@ try:
                 p.call("Input.dispatchMouseEvent", type="mouseWheel", x=cx, y=cy, deltaX=0, deltaY=-60 if i < 20 else 60)
                 time.sleep(1 / 60)
         time.sleep(0.2)
-        med, p95, count = stop_frames(p)
-        check(f"150 blocks: {kind} is smooth (CPU 2x slower)", med <= 20 and p95 <= 34, f"{count} frames in {time.time() - t0:.1f} s, median {med:.1f} ms, 95% {p95:.1f} ms")
+        med, p95, count, span = stop_frames(p)
+        # One loop only: no more frames than the display can show (60 a second), so the timing is real.
+        honest = med > 8 and count <= span * 62 + 2
+        check(f"150 blocks: {kind} is smooth (CPU 2x slower)", honest and med <= 20 and p95 <= 34, f"{count} frames in {span:.1f} s, median {med:.1f} ms, 95% {p95:.1f} ms")
     moved = p.js("return document.querySelector('svg.iso g[transform]')?.getAttribute('transform') || '';")
     check("the drags and wheel turns moved the view", "translate" in moved or "matrix" in moved, moved[:60])
     p.call("Emulation.setCPUThrottlingRate", rate=1)
@@ -163,6 +256,13 @@ try:
         p.js(f"localStorage.clear(); localStorage.setItem('archboard:theme','{theme}');")
         p.goto(URL, wait=2.5)
         run_axe(p, f"{theme}, editor")
+        canvas_contrast(p, f"{theme}, 3D canvas")
+        pick = "const s = document.querySelector('select.pack-select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, '%s'); s.dispatchEvent(new Event('change', {bubbles: true}));"
+        p.js(pick % "aws")
+        time.sleep(0.5)
+        canvas_contrast(p, f"{theme}, 3D canvas shown as AWS")
+        p.js(pick % "generic")
+        time.sleep(0.3)
         p.js("document.querySelector('[data-block=\"n5\"]').dispatchEvent(new MouseEvent('click', {bubbles: true}));")
         p.js("document.querySelector('[data-block=\"n5\"]').focus();")
         time.sleep(0.4)
@@ -170,6 +270,7 @@ try:
         p.js("document.querySelector('button[aria-label=\"Flat view\"]').click();")
         time.sleep(0.5)
         run_axe(p, f"{theme}, flat view")
+        canvas_contrast(p, f"{theme}, flat canvas")
         p.js("document.querySelector('button[aria-label=\"3D view\"]').click();")
         p.js("document.querySelector('button[aria-label=\"Split\"]').click();")
         wait_for(p, "document.querySelector('.cm-content')")
@@ -243,11 +344,13 @@ try:
     check("reduced motion: no transitions or animations", not moving, json.dumps(moving))
     p.js("document.querySelector('button[aria-label=Present]').click();")
     time.sleep(0.6)
+    view = "return document.querySelector('svg.iso g[transform]')?.getAttribute('transform');"
+    start = p.js(view)
     p.js("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true}));")
-    a = p.js("return document.querySelector('svg.iso g[transform]')?.getAttribute('transform');")
+    a = p.js(view)
     time.sleep(0.6)
-    b = p.js("return document.querySelector('svg.iso g[transform]')?.getAttribute('transform');")
-    check("reduced motion: Present jumps to the next step with no glide", a == b and a, f"{a} -> {b}")
+    b = p.js(view)
+    check("reduced motion: Present jumps to the next step with no glide", start != a and a == b, f"{start} -> {a} -> {b}")
 finally:
     p.close()
 

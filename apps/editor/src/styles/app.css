@@ -105,7 +105,7 @@ svg.iso text { font-family: var(--font-mono); fill: var(--ink); }
 .blk:focus-visible .ol { stroke: var(--marker-strong); stroke-width: 3.5; }
 .blk .name, .blk .sub { text-anchor: middle; paint-order: stroke; stroke: var(--c); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
 .blk .name { font: var(--t-block); }
-.blk .sub { font: var(--t-block-sub); fill: color-mix(in srgb, var(--ink) 78%, var(--c)); }
+.blk .sub { font: var(--t-block-sub); fill: color-mix(in srgb, var(--ink) 88%, var(--c)); } /* 88 %: AA on every face colour */
 .blk .groove { fill: none; stroke: var(--edge); stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
 .blk .led { fill: var(--ok); stroke: var(--edge); stroke-width: .9; }
 .blk .bay { fill: none; stroke: var(--edge); stroke-width: 3; stroke-linecap: round; opacity: .5; }
