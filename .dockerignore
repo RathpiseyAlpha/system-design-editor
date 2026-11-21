@@ -1,0 +1,10 @@
+# Only what the checker image needs is copied (see apps/checker/Dockerfile); keep the build context small anyway.
+node_modules
+**/node_modules
+**/dist
+.git
+design
+tools
+*.png
+.env
+.env.*

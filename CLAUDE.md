@@ -7,7 +7,7 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3 started: the rule engine is built, `packages/engine/src/rules.ts`, SPEC section 7 and decision 35; next the checker service `apps/checker`, the embed's edit and learn modes, the learning panel.** M2 added: diagram as
+**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3 started: the rule engine (`packages/engine/src/rules.ts`, SPEC section 7, decision 35) and the checker service (`apps/checker`, decision 37) are built; next the embed's edit and learn modes and the learning panel.** M2 added: diagram as
 code (Split and Code views, CodeMirror, two-way sync, errors on their line, `packages/engine/src/text.ts`); Auto-layout with ELK
 in a Web Worker (`layout/`); the flat top-down view (`Projection` in `canvas/geometry.ts`); Markdown notes beside the text
 (`notes/`); Present mode (`present/`); the read-only embed `/embed/?mode=view&origin=…` (`embed/`, decision 32). The editor core works: engine package (format, roles, six templates); 3D canvas with
@@ -119,6 +119,10 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
   the flat view, the notes panel and the Present bar.
 - Embed check (a stand-in host page on a second origin, both frames, postMessage both ways):
   `python -I tools/check_embed.py` with the preview on 4319 (it serves `tools/` on port 8765 itself).
+- Checker service (`apps/checker`, SPEC 8.2): build with `node build.mjs` in `apps/checker` (esbuild, to `dist/`), run with
+  `ARCHBOARD_KEYS="labsite:<24+ character secret>" node dist/server.js` (port 8787), check over HTTP with
+  `python -I tools/check_checker.py` (it starts the bundle itself; a pipe nobody reads blocks the server's log on Windows,
+  so it logs to a file). Docker: `docker build -f apps/checker/Dockerfile -t archboard-checker .` from the repo root.
 - Quality check (SPEC section 9: first paint, 150 blocks panning, axe-core in both themes, Tab and focus rings, reduced
   motion, no third-party requests, offline): `python -I tools/check_quality.py` with the preview on 4319. Restart the preview
   after a build (it lists the files once). A new screen or panel gets an axe pass there. Small coloured text uses the

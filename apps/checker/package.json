@@ -1,0 +1,19 @@
+{
+  "name": "@archboard/checker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The checker service: scores a diagram against a ruleset with the same engine the editor uses (SPEC section 8.2).",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@archboard/engine": "0.1.0",
+    "@hono/node-server": "2.1.6",
+    "hono": "4.13.16"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

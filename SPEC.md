@@ -3,7 +3,8 @@
 Status: **M1 done** (2026-11-21); **M2 done** (2026-11-21): diagram as code, auto-layout, flat view, notes, Present mode
 and the read-only embed, and section 9 passes in `tools/check_quality.py` (speed, WCAG 2.2 AA by axe-core in both themes,
 keyboard, reduced motion, offline). Not covered by any check: a screen reader, Firefox and Safari, touch. **M3 started**: the
-rule engine (section 7) is built and tested; the checker service, the embed's edit and learning modes and the learning panel are next. "Archboard" is a working name.
+rule engine (section 7) and the checker service (`apps/checker`, decision 37) are built and tested; the embed's edit and learning modes
+and the learning panel are next. "Archboard" is a working name.
 
 ## 1. What it is
 
@@ -261,6 +262,11 @@ They meet through two small, versioned APIs; neither imports the other's code.
   browser uses; hosts in any language (labsite is Flask) call it over HTTP. This replaces the earlier idea of a Python
   `archboard-check` package, because a port would drift from the browser and students would dispute marks (decision 9).
 - **The host's server is the judge**; a score or a simulation result sent from a browser is never trusted.
+- Built in M3 (decision 37): `apps/checker`, `POST /v1/check {diagram, ruleset}` and `GET /v1/health`. The answer is the
+  rule engine's `{valid, results, score, max, errors?}` plus `engine` (the engine's version). 200 is a result (a diagram that
+  is not valid scores 0 with its errors); 400 a request or ruleset that is not right; 401 no or unknown key; 413 over 448 KB;
+  415 not `application/json`; 429 over the host's rate (with `Retry-After`); 503 busy or stopped at its time limit, never a
+  score. The `lab` form arrives with M5.
 
 ### 8.3 First host: the course lab site (work done in labsite, not here)
 A course page embeds the editor in learning mode, stores drafts and hand-ins, calls the checker, and sends the score
@@ -402,6 +408,7 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 34 | **How section 9 is measured** (`tools/check_quality.py`): "classroom laptop" is Chrome with the CPU slowed 4x and a 20 Mbit/s, 20 ms network, cache empty (median of 3 loads); "smooth" for 150 blocks is real drags and wheel turns with the CPU slowed 2x, median frame at most 20 ms and 95 % at most 34 ms, with no more frames counted than 60 a second (one timer only); contrast and names by axe-core 4.10.3 (WCAG 2.2 AA tags) on every screen in both themes, plus two passes of our own where axe cannot decide: every text and tspan on the canvas (blocks, zone tabs, connection labels; 3D, flat and the AWS pack) against the shapes under it, and page text axe leaves undecided against its composited background (a block's product name is 88 % ink on its face colour for this); every visible control reached with Tab (members of a toolbar or group through its tab stop) and a ring on every stop; every canvas action has a keyboard route, checked in `check_editor.py` (decision 36). Small text in a colour (code highlighting) uses the `-text` tokens (`--marker-text`, `--port-text`), which reach 4.5:1 on every surface. | A target that is not measured is not met; these numbers are written down so a later change can be held to them. |
 | 35 | **What each rule means** is fixed in section 7: zone chain not geometry, forbidding rules fail on an empty diagram, `path` directed and simple, `noEdge` both ways by default, `edgeKind` needs at least one connection. `points` in a result is what the rule is worth; `score` adds up the rules that pass. | A student's mark must not depend on where blocks stand, which pack is shown or what they are called, and handing in nothing must not earn points. |
 | 36 | **Every canvas action by keyboard.** Blocks, zone tabs and connections are tab stops with their ring drawn on the shape. Block: Enter selects (or ends Connect to), arrows move one cell, Delete removes. Zone tab: Enter selects, arrows move the zone with its contents, Shift and arrows resize it by a cell, Delete removes it. Connection: Enter selects it (the inspector edits kind and label), Delete removes it. Adding is the palette (or A); connecting is the inspector's Connect to, then Enter on the other block. A side panel that cannot load shows Retry in its place; the canvas keeps working. | Section 9 asks for every action, not every control; before this, zones and connections could only be changed with a mouse. |
+| 37 | **The checker service as built**: Hono 4.13 on Node 22, bundled by esbuild into two files (`server.js`, `worker.js`) so the image holds Node and nothing else. Each check runs in a fresh worker thread with a 2 s time limit and a 96 MB heap; 4 at once and 200 waiting, then 503. Host keys come only from `ARCHBOARD_KEYS` (`name:secret`, secrets of 24+ characters, compared by SHA-256 in constant time); 120 checks a minute per key with a burst of 120 (a class handing in at once). No CORS, no storage, and the log holds time, path, status, duration and host name, never a body or a key. | A body is untrusted, so the worst it can do is fail its own check; nothing of one request stays for the next; a browser can never call the judge. |
 
 Also decided by the instructor (2026-11-20): **AWS icons get rounded corners** to match the stickers (they fill the sticker and
 are clipped to its corner radius, as are the AWS zone icons in tabs). AWS's icon guidelines ask that icons not be cropped;
