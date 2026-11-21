@@ -1,0 +1,160 @@
+{
+  "format": "archboard",
+  "version": 1,
+  "title": "Online shop, two zones",
+  "show": "generic",
+  "zones": [
+    {
+      "id": "z1",
+      "kind": "network",
+      "label": "shop-net",
+      "x": 2,
+      "y": -1,
+      "w": 19,
+      "h": 15
+    },
+    {
+      "id": "za",
+      "kind": "zone",
+      "label": "zone-a",
+      "parent": "z1",
+      "x": 2.5,
+      "y": -0.5,
+      "w": 18,
+      "h": 6.5
+    },
+    {
+      "id": "zb",
+      "kind": "zone",
+      "label": "zone-b",
+      "parent": "z1",
+      "x": 2.5,
+      "y": 6.8,
+      "w": 18,
+      "h": 6.5
+    },
+    {
+      "id": "s1",
+      "kind": "subnet",
+      "access": "public",
+      "label": "public-a",
+      "parent": "za",
+      "x": 3,
+      "y": 0,
+      "w": 4.5,
+      "h": 5.5
+    },
+    {
+      "id": "s2",
+      "kind": "subnet",
+      "access": "private",
+      "label": "private-a",
+      "parent": "za",
+      "x": 8,
+      "y": 0,
+      "w": 12,
+      "h": 5.5
+    },
+    {
+      "id": "s3",
+      "kind": "subnet",
+      "access": "private",
+      "label": "private-b",
+      "parent": "zb",
+      "x": 8,
+      "y": 7.3,
+      "w": 12,
+      "h": 5.5
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n1",
+      "role": "client",
+      "label": "Customers",
+      "x": -1,
+      "y": 6
+    },
+    {
+      "id": "n2",
+      "role": "load-balancer",
+      "label": "web-lb",
+      "zone": "s1",
+      "x": 5.2,
+      "y": 2.7
+    },
+    {
+      "id": "n3",
+      "role": "vm",
+      "label": "app-1",
+      "zone": "s2",
+      "x": 10.5,
+      "y": 2.7
+    },
+    {
+      "id": "n4",
+      "role": "vm",
+      "label": "app-2",
+      "zone": "s3",
+      "x": 10.5,
+      "y": 10
+    },
+    {
+      "id": "n5",
+      "role": "relational-db",
+      "label": "orders-db",
+      "zone": "s2",
+      "x": 16.5,
+      "y": 2.7
+    },
+    {
+      "id": "n6",
+      "role": "relational-db",
+      "label": "orders-db-standby",
+      "zone": "s3",
+      "x": 16.5,
+      "y": 10
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "n1",
+      "to": "n2",
+      "kind": "request",
+      "label": "HTTPS"
+    },
+    {
+      "id": "e2",
+      "from": "n2",
+      "to": "n3",
+      "kind": "request"
+    },
+    {
+      "id": "e3",
+      "from": "n2",
+      "to": "n4",
+      "kind": "request"
+    },
+    {
+      "id": "e4",
+      "from": "n3",
+      "to": "n5",
+      "kind": "request",
+      "label": "SQL"
+    },
+    {
+      "id": "e5",
+      "from": "n4",
+      "to": "n5",
+      "kind": "request"
+    },
+    {
+      "id": "e6",
+      "from": "n5",
+      "to": "n6",
+      "kind": "data",
+      "label": "replication"
+    }
+  ]
+}

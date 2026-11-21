@@ -1,0 +1,205 @@
+{
+  "format": "archboard-challenge",
+  "version": 1,
+  "id": "shop-survives-a-zone",
+  "brief": {
+    "label": "Challenge 1",
+    "title": "Keep the shop open when one failure zone fails",
+    "text": "The shop runs in one **failure zone**: if that data centre goes down, nobody can buy anything.\n\nRedesign it so that:\n\n- customers still reach the app through the load balancer;\n- the app servers stand in **two** failure zones;\n- the database has a standby in the second zone;\n- the database is never reachable from the internet.\n\nPress **Check** as often as you like. Your teacher checks the diagram you hand in."
+  },
+  "start": {
+    "format": "archboard",
+    "version": 1,
+    "title": "Online shop",
+    "show": "generic",
+    "zones": [
+      {
+        "id": "z1",
+        "kind": "network",
+        "label": "shop-net",
+        "x": 3,
+        "y": -0.5,
+        "w": 13.5,
+        "h": 11
+      },
+      {
+        "id": "z2",
+        "kind": "subnet",
+        "access": "public",
+        "label": "public-a",
+        "parent": "z1",
+        "x": 3.8,
+        "y": 0.5,
+        "w": 3.8,
+        "h": 9.2
+      },
+      {
+        "id": "z3",
+        "kind": "subnet",
+        "access": "private",
+        "label": "private-a",
+        "parent": "z1",
+        "x": 8.6,
+        "y": 0.5,
+        "w": 7.2,
+        "h": 9.2
+      }
+    ],
+    "nodes": [
+      {
+        "id": "n1",
+        "role": "client",
+        "label": "Customers",
+        "x": 0,
+        "y": 6
+      },
+      {
+        "id": "n2",
+        "role": "load-balancer",
+        "label": "web-lb",
+        "zone": "z2",
+        "x": 5.7,
+        "y": 6
+      },
+      {
+        "id": "n3",
+        "role": "vm",
+        "label": "app-1",
+        "zone": "z3",
+        "x": 10.2,
+        "y": 3
+      },
+      {
+        "id": "n4",
+        "role": "vm",
+        "label": "app-2",
+        "zone": "z3",
+        "x": 10.2,
+        "y": 8
+      },
+      {
+        "id": "n5",
+        "role": "relational-db",
+        "label": "orders-db",
+        "zone": "z3",
+        "x": 14,
+        "y": 3
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "from": "n1",
+        "to": "n2",
+        "kind": "request",
+        "label": "HTTPS"
+      },
+      {
+        "id": "e2",
+        "from": "n2",
+        "to": "n3",
+        "kind": "request"
+      },
+      {
+        "id": "e3",
+        "from": "n2",
+        "to": "n4",
+        "kind": "request"
+      },
+      {
+        "id": "e4",
+        "from": "n3",
+        "to": "n5",
+        "kind": "request",
+        "label": "SQL"
+      },
+      {
+        "id": "e5",
+        "from": "n4",
+        "to": "n5",
+        "kind": "request"
+      }
+    ]
+  },
+  "rules": {
+    "format": "archboard-rules",
+    "version": 1,
+    "title": "Keep the shop open when one failure zone fails",
+    "rules": [
+      {
+        "id": "path",
+        "points": 2,
+        "text": "Customers reach the app through a load balancer",
+        "hint": "Draw Customers > load balancer > the app servers.",
+        "rule": {
+          "path": [
+            "client",
+            "load-balancer",
+            [
+              "vm",
+              "service",
+              "containers"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "zones",
+        "points": 2,
+        "text": "The app servers stand in at least two failure zones",
+        "hint": "Add Failure zone areas from the palette and put one app server in each.",
+        "rule": {
+          "spread": {
+            "roles": [
+              "vm",
+              "service",
+              "containers"
+            ],
+            "zoneKind": "zone",
+            "min": 2
+          }
+        }
+      },
+      {
+        "id": "standby",
+        "points": 2,
+        "text": "The database has a copy in a second failure zone",
+        "hint": "Add a second relational database in the other zone and connect the first to it with a data connection.",
+        "rule": {
+          "spread": {
+            "roles": "relational-db",
+            "zoneKind": "zone",
+            "min": 2
+          }
+        }
+      },
+      {
+        "id": "private",
+        "points": 1,
+        "text": "No database is in a public subnet",
+        "hint": "Move the database into a private subnet.",
+        "rule": {
+          "placement": {
+            "role": "relational-db",
+            "notIn": {
+              "kind": "subnet",
+              "access": "public"
+            }
+          }
+        }
+      },
+      {
+        "id": "direct",
+        "points": 1,
+        "text": "Customers never talk to a database directly",
+        "hint": "Remove the connection between Customers and the database.",
+        "rule": {
+          "noEdge": {
+            "from": "client",
+            "to": "relational-db"
+          }
+        }
+      }
+    ]
+  }
+}

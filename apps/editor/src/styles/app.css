@@ -322,3 +322,29 @@ button.pal-item:active { cursor: grabbing; }
   max-width: min(440px, calc(100% - 32px)); padding: 12px 14px; background: var(--sheet); border: var(--bw) solid var(--edge);
   border-radius: var(--r-control); box-shadow: var(--pop); font: 400 14px/20px var(--font-prose); }
 .embed-note svg { width: 18px; height: 18px; flex: none; }
+
+/* ---------------- learning mode (design page, Screen C): the brief beside the editor, inside a host page */
+.body-learn { display: grid; grid-template-columns: 340px minmax(0, 1fr); min-height: 0; }
+/* The editor beside the brief answers its own width (palette rail, inspector size), not the whole page's. */
+.learn-main { container: app / size; min-height: 0; min-width: 0; display: grid; }
+.learn-main > * { min-height: 0; }
+.learn-panel { background: var(--sheet); border-right: var(--bw) solid var(--edge); padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); overflow-y: auto; min-height: 0; }
+.learn-head h2 { margin: 0; font: 700 18px/24px var(--font-mono); }
+.learn-label { margin: 0 0 4px; font: var(--t-hint); color: var(--muted); }
+.learn-panel > * { flex: none; } /* the panel scrolls as one; nothing in it shrinks into its own scroll box */
+.learn-brief.notes-view { padding: 0; overflow: visible; background: none; font: 400 14px/21px var(--font-prose); }
+.learn-brief.notes-view > * { margin-bottom: 10px; }
+.learn-brief > :first-child { margin-top: 0; }
+.learn-panel .score { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: var(--bw) solid var(--edge); border-radius: var(--r-control); background: var(--paper); box-shadow: var(--pop-sm); }
+.learn-panel .score > span { display: grid; }
+.score-when { font: var(--t-hint); color: var(--muted); }
+.learn-panel .score b { font: 800 22px/26px var(--font-mono); font-variant-numeric: tabular-nums; }
+.learn-stale { margin: 0; font: var(--t-small); color: var(--warn); }
+.learn-panel .rules { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.learn-panel .rules li { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: start; font: 400 13px/19px var(--font-prose); padding: 7px 10px; border: var(--bw-fine) solid var(--line); border-radius: var(--r-control); }
+.learn-panel .rules li.fail { border-color: var(--warn); background: var(--warn-soft); }
+.learn-panel .rules li small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 17px; }
+.learn-panel .rules li.fail small { color: var(--ink); }
+.learn-panel .rules .chip { box-shadow: none; white-space: nowrap; }
+.learn-note { margin: 0; font: var(--t-hint); color: var(--muted); }
+@container app (max-width: 1439px) { .body-learn { grid-template-columns: 300px minmax(0, 1fr); } }

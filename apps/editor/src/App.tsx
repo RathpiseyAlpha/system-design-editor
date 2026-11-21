@@ -7,6 +7,7 @@ import { Palette, findService } from './ui/Palette.tsx';
 import { Inspector } from './ui/Inspector.tsx';
 import { PresentBar, startPresenting, stopPresenting, stepBy } from './present/PresentBar.tsx';
 import { PanelBoundary } from './ui/PanelBoundary.tsx';
+import { LearnPanel } from './learn/LearnPanel.tsx';
 
 // The text view loads only when it is opened, so the editor starts without CodeMirror.
 // A failed import is not cached by lazy(), so Retry (a new attempt number) makes a new lazy component that loads again.
@@ -103,6 +104,7 @@ export function App() {
   const presenting = useEditor((s) => s.presenting);
   const viewOnly = useEditor((s) => s.viewOnly);
   const embedNote = useEditor((s) => s.embedNote);
+  const learning = useEditor((s) => s.learn !== null && s.embedNote === null);
   const canvas = (
     <div className="canvas-wrap">
       <NoticeBar />
@@ -131,20 +133,22 @@ export function App() {
     );
   }
   if (viewOnly) {
+    const view = (
+      <div className="canvas-wrap">
+        <Canvas />
+        {embedNote && <div className="embed-note" role="status"><Icon name="window" /><span>{embedNote}</span></div>}
+      </div>
+    );
+    // Learning mode locked by the host (after a deadline): the brief and the checks stay beside the diagram.
     return (
       <div className="app app--view">
         <Sprite />
-        <div className="canvas-wrap">
-          <Canvas />
-          {embedNote && <div className="embed-note" role="status"><Icon name="window" /><span>{embedNote}</span></div>}
-        </div>
+        {learning ? <div className="body-learn"><LearnPanel /><div className="learn-main">{view}</div></div> : view}
       </div>
     );
   }
-  return (
-    <div className="app">
-      <Sprite />
-      <TopBar />
+  const body = (
+    <>
       {layout === 'canvas' && (
         <div className="body3">
           <Palette />
@@ -154,6 +158,13 @@ export function App() {
       )}
       {layout === 'split' && <div className="body-split">{code}{canvas}</div>}
       {layout === 'code' && <div className="body-code">{code}</div>}
+    </>
+  );
+  return (
+    <div className="app">
+      <Sprite />
+      <TopBar />
+      {learning ? <div className="body-learn"><LearnPanel /><div className="learn-main">{body}</div></div> : body}
       <StatusBar />
     </div>
   );

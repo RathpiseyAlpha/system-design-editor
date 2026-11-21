@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { serializeDiagram, TEMPLATES } from '@archboard/engine';
-import { useEditor, type Theme } from '../state/store.ts';
+import { useEditor, EMBED, type Theme } from '../state/store.ts';
 import { PACKS, isPack } from '../catalog/packs.ts';
 import { Icon } from './Icon.tsx';
 import { exportImage } from './exportImage.ts';
@@ -68,7 +68,8 @@ export function TopBar() {
       <span className="brand"><Mark />Archboard</span>
       <span className="vsep" />
       <input className="doc-title" aria-label="Diagram name" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
-      {save === 'saved' ? (
+      {/* In an embed nothing is kept in this browser: the host page keeps the work and says so itself. */}
+      {EMBED.embed ? null : save === 'saved' ? (
         <span className="chip chip--ok" title="Every change is kept in this browser"><Icon name="check" />Saved</span>
       ) : (
         <span className="chip chip--warn" title="This browser blocks storage: use Save to keep your work"><Icon name="alert" />Not saved</span>
@@ -76,22 +77,27 @@ export function TopBar() {
       <span className="spacer" />
       <button className="btn btn--icon btn--ghost" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}><Icon name="undo" /></button>
       <button className="btn btn--icon btn--ghost" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" /></button>
-      <select className="input select file-select" aria-label="New diagram" value="" onChange={(e) => { if (e.target.value) newFromTemplate(e.target.value); }}>
-        <option value="">New</option>
-        {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
-      </select>
-      <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
-      <input
-        ref={fileInput}
-        type="file"
-        accept=".json,application/json"
-        hidden
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          e.target.value = '';
-          if (f) openText(await f.text(), f.name);
-        }}
-      />
+      {/* In an embed the host owns the diagram: no New or Open, only a copy to save and pictures to export. */}
+      {!EMBED.embed && (
+        <>
+          <select className="input select file-select" aria-label="New diagram" value="" onChange={(e) => { if (e.target.value) newFromTemplate(e.target.value); }}>
+            <option value="">New</option>
+            {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
+          </select>
+          <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) openText(await f.text(), f.name);
+            }}
+          />
+        </>
+      )}
       <button className="btn" type="button" aria-label="Save the file" title="Save the diagram as a file" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
       <select className="input select file-select" aria-label="Export a picture" value="" onChange={(e) => { const v = e.target.value; if (v === 'png' || v === 'svg') void exportPicture(v); }}>
         <option value="">Export</option>

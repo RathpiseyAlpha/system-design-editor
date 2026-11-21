@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Learning host (stand-in)</title>
+  <style>
+    html, body { margin: 0; height: 100%; font: 14px/1.4 system-ui, sans-serif; background: #F4F5F7; color: #1B1D21; }
+    body { display: grid; grid-template-rows: 52px minmax(0, 1fr); }
+    header { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #fff; border-bottom: 1px solid #D9DDE4; }
+    header button { margin-left: auto; background: #1F4B99; color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 600; }
+    #out { color: #555C69; }
+    main { padding: 12px; min-height: 0; }
+    iframe { width: 100%; height: 100%; border: 2px dashed #868E9C; border-radius: 10px; background: #fff; }
+  </style>
+</head>
+<body>
+  <!--
+    The stand-in learning host (tools/learn-host/server.py). It does what a course site does: puts the editor in learning
+    mode, sends the brief, the starting diagram (or the student's last change) and the rules, keeps every change, and on
+    Hand in asks the editor for the diagram and lets its own server score it through the checker.
+  -->
+  <header><b>Stand-in lab site</b><span id="out">Loading…</span><button id="hand-in" type="button">Hand in</button></header>
+  <main><iframe id="ed" title="Diagram editor, learning mode"></iframe></main>
+  <script>
+    const q = new URLSearchParams(location.search);
+    const editor = new URL(q.get('editor') || 'http://localhost:4319/embed/');
+    const frame = document.getElementById('ed'), out = document.getElementById('out');
+    window.log = []; window.lastChange = null; window.serverResult = null;
+    let challenge = null, extra = {};
+    const send = (msg) => frame.contentWindow.postMessage({ v: 1, ...msg }, editor.origin);
+    // What to send on the next ready: the student's last change if there is one, else the starting diagram.
+    window.loadNext = (opts = {}) => {
+      extra = opts;
+      frame.src = `${editor.href}?mode=learn&origin=${encodeURIComponent(location.origin)}&n=${Date.now()}`;
+    };
+    window.sendLoad = (opts = {}) => send({ type: 'load', diagram: window.lastChange || challenge.start, brief: challenge.brief, rules: challenge.rules, ...opts });
+    window.send = send;
+    addEventListener('message', async (e) => {
+      if (e.origin !== editor.origin || e.source !== frame.contentWindow) return;
+      window.log.push(e.data);
+      const m = e.data;
+      if (m.type === 'ready') window.sendLoad(extra);
+      if (m.type === 'loaded') out.textContent = `Loaded "${m.title}" (${m.nodes} blocks)`;
+      if (m.type === 'change') { window.lastChange = m.diagram; out.textContent = m.dirty ? 'Changes kept, not handed in' : 'Saved'; }
+      if (m.type === 'hints') out.textContent = `The editor's own check: ${m.score} / ${m.max} (indicative)`;
+      if (m.type === 'save') {
+        window.lastChange = m.diagram;
+        // The page sends a made-up score as well: the server must ignore it.
+        const r = await fetch('/hand-in', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ diagram: m.diagram, score: 999, rules: { fake: true } }) });
+        window.serverResult = await r.json();
+        out.textContent = `Handed in. Score from the server: ${window.serverResult.score} / ${window.serverResult.max}`;
+      }
+    });
+    document.getElementById('hand-in').onclick = () => send({ type: 'requestSave' });
+    fetch('/challenge').then((r) => r.json()).then((c) => { challenge = c; window.loadNext(); });
+  </script>
+</body>
+</html>

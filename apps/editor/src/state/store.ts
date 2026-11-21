@@ -1,8 +1,8 @@
 // The editor's state. The diagram store holds the file and its history; components subscribe to the smallest slice they need.
 import { create } from 'zustand';
-import { emptyDiagram, fromTemplate, parseDiagramText, serializeDiagram, type Diagram, type DEdge, type DNode, type DZone, type ZoneKind } from '@archboard/engine';
+import { emptyDiagram, evaluateRules, fromTemplate, parseDiagramText, serializeDiagram, type CheckResult, type Diagram, type DEdge, type DNode, type DZone, type Ruleset, type ZoneKind } from '@archboard/engine';
 import { isPack, type PackId } from '../catalog/packs.ts';
-import { readEmbed } from '../embed/protocol.ts';
+import { readEmbed, type Brief } from '../embed/protocol.ts';
 import { addEdge, addNode, addZone, deleteEdge, deleteNodes, deleteZone, moveNode, moveZone, resizeZone, updateEdge, updateNode, updateZone } from './ops.ts';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -14,7 +14,7 @@ const COALESCE_MS = 1500;
 const AUTOSAVE_KEY = 'archboard:autosave';
 const THEME_KEY = 'archboard:theme';
 
-/** Opened as an embed (/embed/?mode=view&origin=…)? Then the page shows what the host sends and never touches the autosave. */
+/** Opened as an embed (/embed/?mode=…&origin=…)? Then the page shows what the host sends and never touches the autosave. */
 export const EMBED = typeof location === 'undefined' ? readEmbed('/', '') : readEmbed(location.pathname, location.search);
 
 interface EditorState {
@@ -47,6 +47,8 @@ interface EditorState {
   viewOnly: boolean;
   /** In an embed: what the page is waiting for, or why it cannot start. */
   embedNote: string | null;
+  /** Learning mode (an embed with mode=learn): the host's brief and rules, and the last Check. */
+  learn: Learn | null;
   theme: Theme;
   save: SaveState;
   notice: Notice | null;
@@ -73,6 +75,8 @@ interface EditorState {
   setStep: (step: number) => void;
   /** Replace the diagram's notes; typing is one undo step. */
   setNotes: (text: string) => void;
+  /** Learning mode: check the diagram against the host's rules, here in the browser (indicative; the host scores). */
+  check: () => void;
   /** Replace positions with an auto-layout: one undo step, and the view fits the result. */
   applyLayout: (d: Diagram) => void;
 
@@ -89,6 +93,15 @@ interface EditorState {
   updateZone: (id: string, patch: Partial<Pick<DZone, 'label' | 'kind' | 'access'>>, key?: string) => void;
   connect: (from: string, to: string) => void;
   updateEdge: (id: string, patch: Partial<Pick<DEdge, 'kind' | 'label'>>, key?: string) => void;
+}
+
+export interface Learn {
+  brief: Brief | null;
+  rules: Ruleset | null;
+  /** The last Check, kept until the next one; `checked` is the diagram it looked at (an edit since makes it out of date). */
+  result: CheckResult | null;
+  checkedAt: number | null;
+  checked: Diagram | null;
 }
 
 export type Drag =
@@ -140,6 +153,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   step: 0,
   viewOnly: EMBED.embed,
   embedNote: EMBED.embed ? EMBED.problem ?? 'Waiting for the host page to send a diagram.' : null,
+  learn: EMBED.mode === 'learn' && !EMBED.problem ? { brief: null, rules: null, result: null, checkedAt: null, checked: null } : null,
   theme: readTheme(),
   save: 'saved',
   notice: null,
@@ -205,6 +219,11 @@ export const useEditor = create<EditorState>()((set, get) => ({
   setSide: (side) => set({ side }),
   present: (on) => set({ presenting: on, step: 0, selected: null, connectFrom: null, drag: null }),
   setStep: (step) => set({ step }),
+  check: () => {
+    const s = get();
+    if (!s.learn?.rules) return;
+    set({ learn: { ...s.learn, result: evaluateRules(s.diagram, s.learn.rules), checkedAt: Date.now(), checked: s.diagram } });
+  },
   setNotes: (text) => {
     const { notes: _old, ...rest } = get().diagram;
     get().commit(text ? { ...rest, notes: text } : rest, 'docnotes');
