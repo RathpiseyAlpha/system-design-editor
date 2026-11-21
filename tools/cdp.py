@@ -90,6 +90,26 @@ class Page:
             if b1 & 0x80:
                 return msg
 
+    def tab(self, url, wait=2.5):
+        """Open a second tab in the same browser (same profile: same cookies and localStorage) and drive it on its own
+        connection. Its close() closes that tab only."""
+        tid = self.call("Target.createTarget", url=url)["targetId"]
+        for _ in range(40):
+            tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json"))
+            t = next((x for x in tabs if x.get("id") == tid and x.get("webSocketDebuggerUrl")), None)
+            if t:
+                break
+            time.sleep(0.25)
+        else:
+            raise RuntimeError("the second tab did not open")
+        other = Page.__new__(Page)
+        other.port, other.n, other.profile, other.proc = self.port, 0, None, None
+        other.sock = other._connect(t["webSocketDebuggerUrl"])
+        other.call("Page.enable")
+        time.sleep(wait)
+        other._owner, other._tid = self, tid
+        return other
+
     def call(self, method, **params):
         self.n += 1
         mid = self.n
@@ -126,6 +146,13 @@ class Page:
                 time.sleep(.1)
 
     def close(self):
+        if getattr(self, "_owner", None) is not None:
+            try:
+                self._owner.call("Target.closeTarget", targetId=self._tid)
+                self.sock.close()
+            except Exception:
+                pass
+            return
         try:
             self.proc.terminate()
             self.proc.wait(timeout=10)            # wait for it to exit, or the next page can attach to this Chrome and its remembered course

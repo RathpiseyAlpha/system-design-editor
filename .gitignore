@@ -19,3 +19,7 @@ embed-check.png
 layout-sheet.png
 learn-check*.png
 sim-check*.png
+cloud-check*.png
+
+# The cloud service's local database (docs/cloud-deploy.md)
+data/

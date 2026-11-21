@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { useEditor } from './state/store.ts';
 import { Canvas } from './canvas/Canvas.tsx';
 import { Icon, Sprite } from './ui/Icon.tsx';
+import { CloudDialogs } from './cloud/CloudUI.tsx';
 import { TopBar } from './ui/TopBar.tsx';
 import { Palette, findService } from './ui/Palette.tsx';
 import { Inspector } from './ui/Inspector.tsx';
@@ -171,6 +172,7 @@ export function App() {
       <div className="app">
         <Sprite />
         <TopBar />
+        <CloudDialogs />
         <div className="simgrid">
           <ScenarioPanel />
           <div className="canvas-wrap">
@@ -201,6 +203,7 @@ export function App() {
     <div className="app">
       <Sprite />
       <TopBar />
+      <CloudDialogs />
       {learning ? <div className="body-learn"><LearnPanel /><div className="learn-main">{body}</div></div> : body}
       <StatusBar />
     </div>

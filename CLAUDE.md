@@ -7,7 +7,7 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3's editor side is built: rule engine (`packages/engine/src/rules.ts`, decision 35), checker service (`apps/checker`, decision 37), embed edit and learn modes with the learning panel (`learn/`, decision 38), first challenge (`challenges/`); left for M3: the labsite page (`docs/labsite-host.md`) and use in class. M4: the engine `packages/engine/src/sim.ts` (decision 39) and Simulate mode (`sim/`, decision 40) are built; Step-through, recovery presets and the checker's `lab` form (M5) are next.** M2 added: diagram as
+**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3's editor side is built: rule engine (`packages/engine/src/rules.ts`, decision 35), checker service (`apps/checker`, decision 37), embed edit and learn modes with the learning panel (`learn/`, decision 38), first challenge (`challenges/`); left for M3: the labsite page (`docs/labsite-host.md`) and use in class. M4: the engine `packages/engine/src/sim.ts` (decision 39) and Simulate mode (`sim/`, decision 40) are built; Step-through, recovery presets and the checker's `lab` form (M5) are next. Accounts and online saving (`apps/cloud`, `apps/editor/src/cloud/`, SPEC 8.4, decision 41) are built and checked with test accounts; real GitHub/Google sign-in needs the instructor's OAuth apps (`docs/cloud-deploy.md`), not deployed.** M2 added: diagram as
 code (Split and Code views, CodeMirror, two-way sync, errors on their line, `packages/engine/src/text.ts`); Auto-layout with ELK
 in a Web Worker (`layout/`); the flat top-down view (`Projection` in `canvas/geometry.ts`); Markdown notes beside the text
 (`notes/`); Present mode (`present/`); the read-only embed `/embed/?mode=view&origin=…` (`embed/`, decision 32). The editor core works: engine package (format, roles, six templates); 3D canvas with
@@ -32,7 +32,8 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
 ## Decided by the instructor (2026-11-20; do not reopen without them)
 
 - **Separate project** with its own CLAUDE.md and SPEC.md. Hosts (the lab site `../labsite`, a student portal, anyone) use it
-  only through an API or plugin (SPEC section 8). Never import a host's code here, and never add accounts, marks or deadlines here.
+  only through an API or plugin (SPEC section 8). Never import a host's code here, and never add marks or deadlines here.
+  Accounts exist only in the cloud service (`apps/cloud`, decision 41, asked for by the instructor 2026-11-21), never in an embed.
 - **Generic, not tied to AWS or to one course.** The core is vendor-neutral roles and zone kinds; vendors are packs; courses
   are hosts that turn on learning mode. Never hard-code a vendor's or a course's name, product or rule in the core.
 - **Plan and design first**, build after approval.
@@ -64,7 +65,11 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
   the judge never disagree. The Python `archboard-check` package is dropped; labsite calls the checker over HTTP.
 - **Simulation engine: rate-based, fixed 1 s step**, deterministic (id order, seeded random only, no clock, rounded each
   tick, `engine` version on results). Routing, verdict and defaults: SPEC 13.3–13.4; defaults are tuned in M4.
-- **Hosting:** the editor on GitHub Pages; the checker in Docker next to labsite on the instructor's server, internal only.
+- **Hosting:** the editor on GitHub Pages (no accounts); the checker in Docker next to labsite on the instructor's server,
+  internal only; the cloud service (editor + accounts, one address, https) in Docker behind the server's proxy (decision 41).
+- **Accounts (decision 41):** GitHub and Google OAuth written by hand (no library: `arctic` is deprecated), no passwords, only
+  provider + provider id + display name kept; `node:sqlite`; sessions as hashed tokens in HttpOnly SameSite=Lax cookies;
+  Origin checked on every change; versions with 409 conflicts the person settles; nothing left in the browser on sign-out.
 - **AWS icon files are fetched at build time, never committed.**
 - Labs lock per-instance capacity, latency and hit rate and give an instance budget, so checks cannot be passed by typing
   big numbers.
@@ -93,6 +98,10 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
 - Fonts and icons are bundled; no requests to Google or other third parties from the app.
 - A diagram file from outside is untrusted: validate it with the schema and limits in SPEC section 6; render labels as text,
   never as HTML. The embed API accepts messages only from the declared host origin.
+- The cloud service: every query names the owner, another person's diagram is 404; every diagram through `parseDiagram`;
+  never log a body, a name or a cookie; `ARCHBOARD_DEV_LOGIN` only with a localhost `PUBLIC_URL`. In the editor, the online
+  sync (`cloud/store.ts`) must never send a diagram left by another person, and sign-out must clear the autosave, the
+  `archboard:online` link and the undo history (`reset`, not `load`). Tested in `cloud/store.test.ts` and `check_cloud.py`.
 - A server-side checker is the judge; a score or a simulation result computed in the browser is a hint only.
 - Simulator: label every number as indicative ("Teaching model: indicative numbers"); never call it an emulator; never
   read from or write to a real cloud. Simulation reads roles and zones, never products. Node and edge `sim` fields are
@@ -131,6 +140,12 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
 - Simulate mode (`python -I tools/check_sim.py`, preview on 4319): presets, Run in the worker, the canvas at chosen
   seconds, Save and Open scenario, capacity settings, Space, and the same numbers from Node (`tools/sim_node.mjs` runs the
   engine source through esbuild), plus layout, axe, contrast and Tab at four sizes in both themes.
+- Accounts and online saving (`python -I tools/check_cloud.py`): build the editor and `apps/cloud` (`node build.mjs`), start
+  the service with test accounts and an empty database: `PUBLIC_URL=http://localhost:4320/ PORT=4320 ARCHBOARD_DEV_LOGIN=1
+  ARCHBOARD_DB=<new file> ARCHBOARD_STATIC=apps/editor/dist node --disable-warning=ExperimentalWarning apps/cloud/dist/server.js`.
+  It checks sign-in, first upload, saving, reload, My diagrams, a conflict, New, offline, two tabs (`Page.tab`), sign-out on a shared computer, a
+  second computer, delete account, axe in both themes and the top bar at four sizes. The service serves `dist/` live, but
+  restart it with a new database before each run. Deploy steps for the instructor: `docs/cloud-deploy.md`.
 - Quality check (SPEC section 9: first paint, 150 blocks panning, axe-core in both themes, Tab and focus rings, reduced
   motion, no third-party requests, offline): `python -I tools/check_quality.py` with the preview on 4319. Restart the preview
   after a build (it lists the files once). A new screen or panel gets an axe pass there. Small coloured text uses the

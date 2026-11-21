@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { parseScenario, serializeDiagram, TEMPLATES } from '@archboard/engine';
 import { useEditor, EMBED, type Theme } from '../state/store.ts';
 import { PACKS, isPack } from '../catalog/packs.ts';
@@ -6,6 +6,8 @@ import { Icon } from './Icon.tsx';
 import { exportImage } from './exportImage.ts';
 import { useSim } from '../sim/store.ts';
 import { buildScenario } from '../sim/scenario.ts';
+import { Account, openPanel, SaveChip } from '../cloud/CloudUI.tsx';
+import { useCloud } from '../cloud/store.ts';
 
 /** The brand mark: a tiny compute block. */
 function Mark() {
@@ -31,7 +33,6 @@ const fileName = (title: string) => `${title.trim().toLowerCase().replace(/[^a-z
 
 export function TopBar() {
   const title = useEditor((s) => s.diagram.title);
-  const save = useEditor((s) => s.save);
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
   const pack = useEditor((s) => s.pack);
@@ -41,6 +42,13 @@ export function TopBar() {
   const fileInput = useRef<HTMLInputElement>(null);
   const scenarioInput = useRef<HTMLInputElement>(null);
   const mode = useEditor((s) => s.mode);
+  const online = useCloud((s) => s.status === 'in');
+  // "Open a file" from the My diagrams dialog uses this same picker.
+  useEffect(() => {
+    const pick = () => fileInput.current?.click();
+    window.addEventListener('archboard:open-file', pick);
+    return () => window.removeEventListener('archboard:open-file', pick);
+  }, []);
 
   // A scenario file (archboard-scenario v1): the ticked presets, or the one opened from a file.
   const saveScenario = () => {
@@ -87,15 +95,11 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      <span className="brand"><Mark />Archboard</span>
+      <span className="brand"><Mark /><span className="brand-name">Archboard</span></span>
       <span className="vsep" />
       <input className="doc-title" aria-label="Diagram name" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
       {/* In an embed nothing is kept in this browser: the host page keeps the work and says so itself. */}
-      {EMBED.embed ? null : save === 'saved' ? (
-        <span className="chip chip--ok" title="Every change is kept in this browser"><Icon name="check" />Saved</span>
-      ) : (
-        <span className="chip chip--warn" title="This browser blocks storage: use Save to keep your work"><Icon name="alert" />Not saved</span>
-      )}
+      {EMBED.embed ? null : <SaveChip />}
       <span className="spacer" />
       {/* Design or Simulate (SPEC section 13.1). Not in an embed: labs (M5) will turn Simulate on for a host. */}
       {!EMBED.embed && (
@@ -121,7 +125,10 @@ export function TopBar() {
                 <option value="">New</option>
                 {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
               </select>
-              <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
+              {/* Signed in, Open lists the online diagrams (with "Open a file" inside); otherwise it opens a file. */}
+              {online
+                ? <button className="btn" type="button" aria-label="Open" title="Open one of your diagrams, or a file" onClick={() => openPanel('list')}><Icon name="folder" /><span className="lbl">Open</span></button>
+                : <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>}
               <input
                 ref={fileInput}
                 type="file"
@@ -173,6 +180,7 @@ export function TopBar() {
       >
         <Icon name={theme === 'dark' ? 'moon' : theme === 'light' ? 'sun' : 'contrast'} />
       </button>
+      {!EMBED.embed && <Account />}
     </header>
   );
 }

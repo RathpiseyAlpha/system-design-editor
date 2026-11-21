@@ -11,7 +11,7 @@ export interface Notice { kind: 'bad' | 'ok'; title: string; lines?: string[] }
 
 const HISTORY = 100;
 const COALESCE_MS = 1500;
-const AUTOSAVE_KEY = 'archboard:autosave';
+export const AUTOSAVE_KEY = 'archboard:autosave';
 const THEME_KEY = 'archboard:theme';
 
 /** Opened as an embed (/embed/?mode=…&origin=…)? Then the page shows what the host sends and never touches the autosave. */
@@ -25,6 +25,8 @@ interface EditorState {
   lastEdit: { key: string; at: number } | null;
   /** Bumped when a different diagram is loaded, so the canvas fits it once. */
   docKey: number;
+  /** Bumped by New and Open (load), not by edits: online saving starts a new online diagram for each. */
+  loads: number;
   pack: PackId;
   selected: string | null;
   /** Something being dragged, drawn at its new place until the drop is committed. Not part of the history. */
@@ -61,6 +63,9 @@ interface EditorState {
   undo: () => void;
   redo: () => void;
   load: (d: Diagram) => void;
+  /** Show another diagram with no history at all (an online diagram opened, or signing out): Undo cannot bring the
+   *  previous one back, so nothing of one person's work is left behind for the next. */
+  reset: (d: Diagram) => void;
   openText: (text: string, fileName: string) => void;
   newFromTemplate: (id: string) => void;
   setPack: (p: PackId) => void;
@@ -144,6 +149,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   future: [],
   lastEdit: null,
   docKey: 1,
+  loads: 0,
   pack: isPack(start.show) ? start.show : 'generic',
   selected: null,
   drag: null,
@@ -187,7 +193,8 @@ export const useEditor = create<EditorState>()((set, get) => ({
       return { diagram: next, past: [...s.past, s.diagram], future: s.future.slice(1), lastEdit: null, selected: keep(next, s.selected) };
     }),
   // Loading keeps the previous diagram in the history, so New and Open never lose work: Undo brings it back.
-  load: (d) => set((s) => ({ diagram: d, past: [...s.past, s.diagram].slice(-HISTORY), future: [], lastEdit: null, docKey: s.docKey + 1, selected: null, drag: null, connectFrom: null, pack: isPack(d.show) ? d.show : 'generic' })),
+  load: (d) => set((s) => ({ diagram: d, past: [...s.past, s.diagram].slice(-HISTORY), future: [], lastEdit: null, docKey: s.docKey + 1, loads: s.loads + 1, selected: null, drag: null, connectFrom: null, pack: isPack(d.show) ? d.show : 'generic' })),
+  reset: (d) => set((s) => ({ diagram: d, past: [], future: [], lastEdit: null, docKey: s.docKey + 1, selected: null, drag: null, connectFrom: null, pack: isPack(d.show) ? d.show : 'generic' })),
   openText: (text, fileName) => {
     const r = parseDiagramText(text);
     if (r.ok) {
@@ -284,15 +291,30 @@ function keep(d: Diagram, id: string | null): string | null {
 
 // Autosave in this browser, half a second after the last change. Storage can be blocked: then the status says so.
 let timer: ReturnType<typeof setTimeout> | undefined;
+let pending = false;
+/** Write a change not yet in the autosave now (before the page goes to a sign-in provider, or is closed). Without one,
+ *  nothing is written: an untouched template is no one's work, and must not look like work to keep at sign-in. */
+export function flushAutosave() {
+  clearTimeout(timer);
+  if (!pending) return;
+  pending = false;
+  try {
+    localStorage.setItem(AUTOSAVE_KEY, serializeDiagram(useEditor.getState().diagram));
+    if (useEditor.getState().save !== 'saved') useEditor.setState({ save: 'saved' });
+  } catch {
+    useEditor.setState({ save: 'blocked' });
+  }
+}
+/** Forget the autosave (signing out on a shared computer). */
+export function clearAutosave() {
+  clearTimeout(timer);
+  pending = false;
+  try { localStorage.removeItem(AUTOSAVE_KEY); } catch { /* blocked: nothing was kept */ }
+}
 useEditor.subscribe((s, prev) => {
   if (s.diagram === prev.diagram || EMBED.embed) return;
   clearTimeout(timer);
-  timer = setTimeout(() => {
-    try {
-      localStorage.setItem(AUTOSAVE_KEY, serializeDiagram(useEditor.getState().diagram));
-      if (useEditor.getState().save !== 'saved') useEditor.setState({ save: 'saved' });
-    } catch {
-      useEditor.setState({ save: 'blocked' });
-    }
-  }, 500);
+  pending = true;
+  timer = setTimeout(flushAutosave, 500);
 });
+if (typeof window !== 'undefined' && !EMBED.embed) window.addEventListener('pagehide', flushAutosave);

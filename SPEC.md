@@ -6,7 +6,9 @@ keyboard, reduced motion, offline). Not covered by any check: a screen reader, F
 rule engine (section 7), the checker service (`apps/checker`, decision 37), the embed's edit and learn modes with the learning
 panel (decision 38) and a first challenge (`challenges/`) are built and checked. Left for M3: the labsite course page (work in
 labsite, `docs/labsite-host.md`) and a challenge used in class. **M4**: the simulation engine (section 13) and Simulate mode (decision 40) are built and checked,
-the browser and Node giving the same numbers; Step-through, recovery presets and the seed are left. "Archboard" is a working name.
+the browser and Node giving the same numbers; Step-through, recovery presets and the seed are left. **Accounts and online
+saving** (section 8.4, decision 41) are built and checked (`apps/cloud`); real GitHub and Google sign-in need the
+instructor's OAuth apps, and the service is not deployed. "Archboard" is a working name.
 
 ## 1. What it is
 
@@ -115,8 +117,13 @@ switched off, results panel with a verdict, capacity settings per block, scenari
 ### v4 (M5) — labs (section 14)
 A host add-on: a brief, a starting diagram, scenarios to survive and behaviour checks, scored by the host through the checker API.
 
+### Accounts (section 8.4)
+Sign in with GitHub or Google where the editor is served by the cloud service; each person's diagrams online, saved as
+they change, with conflicts settled by the person. The editor without the service (GitHub Pages, a fresh clone) and every
+embed work as before, with no sign-in.
+
 ### Later
-Cost estimate, Terraform export, AI first draft, real-time co-editing.
+Cost estimate, Terraform export, AI first draft, real-time co-editing, read-only share links.
 
 ### Not doing
 Deploying anything. Reading anyone's cloud account. Free drawing not tied to blocks (use a whiteboard for that).
@@ -263,7 +270,8 @@ They meet through two small, versioned APIs; neither imports the other's code.
   `tools/learn-host/` is a stand-in host with a server, and `challenges/` holds challenge files (`archboard-challenge`).
 - A host may limit the packs offered (`packs: ["generic", "oss"]`).
 - Optional JS mount for same-origin hosts: `Archboard.mount(element, {diagram, mode, onChange, onSubmit})`.
-- The editor never calls a host's server and never sees a person's identity.
+- The editor never calls a host's server, and in an embed never sees a person's identity (no sign-in, no cloud calls: the
+  host keeps the work). Accounts exist only in the editor served by the cloud service (section 8.4).
 
 ### 8.2 Checker API
 - `POST /v1/check` `{diagram, ruleset}` → `{valid, results: [{id, pass, points, message}], score, max}`; stateless.
@@ -282,6 +290,36 @@ They meet through two small, versioned APIs; neither imports the other's code.
 ### 8.3 First host: the course lab site (work done in labsite, not here)
 A course page embeds the editor in learning mode, stores drafts and hand-ins, calls the checker, and sends the score
 through its own rules (deadlines, late work, marks), following labsite's CLAUDE.md.
+
+### 8.4 Accounts and online saving (`apps/cloud`, decision 41)
+A second service, separate from the checker: it serves the editor's build and its own API from **one address**, so the
+session cookie is first-party and there is no CORS. Sign-in is **GitHub or Google by OAuth 2** (authorization code with
+state; PKCE for Google); the service never sees a password and keeps only the provider, the provider's id for the person
+and a display name (no email, no picture). A provider is on when its client id and secret are set.
+
+- `GET /api/me` → `{user: {id, name} | null, providers, dev}`; `POST /api/sign-out`; `DELETE /api/me` deletes the person,
+  their sessions and every diagram. `GET /auth/:provider` and `/auth/:provider/callback`.
+- `GET /api/diagrams` (id, title, version, updated, bytes; at most 500 a person), `POST /api/diagrams {diagram}`,
+  `GET|DELETE /api/diagrams/:id`, `PUT /api/diagrams/:id {diagram, base}` → the new version, or **409 with the current copy**
+  when someone saved since `base`. Every diagram goes through the file format's schema and limits and is stored as its
+  canonical text. Another person's diagram is 404, never 403.
+- Sessions: a 32-byte random token in an HttpOnly, SameSite=Lax cookie (`__Host-` and Secure on https); the database keeps
+  only its SHA-256; 30 days from the last visit, renewed when under 15 are left. A request that changes anything must carry
+  the editor's own `Origin`. 120 requests a minute a person. The log has time, path, status, duration and the person's id,
+  never a body, a name or a cookie.
+- The editor asks `/api/me` at start; anything but the service's JSON (GitHub Pages, the dev server) means no service, and
+  nothing changes. Signed in, the diagram on screen is one of the person's online diagrams: a change is sent a second after
+  the last one with the version it was made to; New and Open start a new online diagram; Open lists the online diagrams
+  (with "Open a file" inside). The browser's autosave stays underneath, so a lost connection loses nothing (Offline, then
+  sent when it returns, or on the next visit). A conflict stops saving until the person chooses: keep this one, use the
+  other one (this one stays in Undo) or keep both (this one becomes a copy).
+- **Shared computers**: signing out removes the autosave, the link to the online diagram and the undo history, and shows the
+  template. On the first sign-in in a browser, work already there becomes a new online diagram; work left by another
+  person is never put into this account. Work not yet online when a session ends stays until the same person signs in.
+  Signing out in one tab signs out every tab of that browser (a `storage` event), so another open tab cannot write the
+  diagram back.
+- `ARCHBOARD_DEV_LOGIN=1` offers test accounts with no provider, only when the address is localhost, and the service then
+  listens on 127.0.0.1 only (for the checks and for trying it). `tools/check_cloud.py` checks all of the above in a browser against the real service.
 
 ## 9. Screens and quality bar
 
@@ -342,8 +380,13 @@ tools/            fetch_icons.py and other scripts.   design/   tokens, icons, d
 - Not Python (the engine would exist twice and drift), not NestJS (boilerplate for two endpoints), not Express (older,
   untyped), not free serverless or edge plans (CPU-time limits can cut a simulation short).
 
-**Later, only when wanted:** read-only share links stored in SQLite in the same service (long unguessable ids, no accounts;
-Postgres only if it outgrows one server); real-time co-editing with Yjs and a Hocuspocus server in the same service.
+**Cloud service (`apps/cloud`, decision 41)**: Hono on Node 22 with Node's own SQLite (`node:sqlite`, no native package),
+bundled by esbuild into one file; it serves the editor's build and the API of section 8.4 from one address. Sign-in is
+written against the providers' OAuth endpoints directly (three requests each), not with a library: the one in use for this,
+`arctic`, is marked deprecated on npm. Postgres only if it outgrows one server.
+
+**Later, only when wanted:** read-only share links in the cloud service (long unguessable ids); real-time co-editing with
+Yjs and a Hocuspocus server in the same service.
 
 **Quality tools:** Vitest (engine, stores, components), Playwright (editor at 1280 × 720, 1366 × 768, 1536 × 864 and
 1920 × 1080, light and dark), a determinism test that runs the same scenario in Node and in a browser worker and compares
@@ -390,7 +433,7 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 5 | **Name "Archboard" stays the working name.** | Renaming is cheap until a public launch. A trademark search comes before any public launch (still open, below). |
 | 6 | **AWS icon files are fetched at build time, not committed.** | AWS's wording covers making diagrams; redistributing the files in a public repository is a separate question, so the cautious choice. The deployed editor does serve them to its users, inside the diagram tool, as other diagram tools do; without them (a fresh clone, CI) the editor shows the generic line icons. |
 | 7 | **Draft text syntax (section 4) approved**, refined while building M2. | Good enough to build against; small changes are cheap before M2 ships. |
-| 8 | **Hosting**: the editor on GitHub Pages; the checker service in Docker next to labsite on the instructor's server, internal only. | Free, already where the repository is; the checker needs no public address. |
+| 8 | **Hosting**: the editor on GitHub Pages; the checker service in Docker next to labsite on the instructor's server, internal only. Since decision 41, the editor with accounts is served by the cloud service (public, https); GitHub Pages stays as the version without accounts. | Free, already where the repository is; the checker needs no public address. |
 | 9 | **One TypeScript engine** in the browser's Web Worker and in the Node checker; the Python `archboard-check` package is dropped. | A port would drift and students would dispute marks. labsite calls the checker over HTTP. |
 | 10 | **Engine: rate-based, fixed 1 s step**, deterministic (section 13.4). Discrete-event is not planned. | Fast, simple, identical in browser and server; per-request detail is not needed for a teaching model. |
 | 11 | **Behaviour table (13.3) adopted as the starting defaults**, tuned during M4 testing with real diagrams. | Indicative by design; tuning needs a working engine. |
@@ -423,6 +466,7 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 38 | **Learning mode as built** follows the design page's Screen C: the brief, the score, Check and a result per rule in a column left of the editor; the editing area beside it keeps the top bar (without New and Open: the host owns the diagram, and there is no Saved chip), the palette and the inspector, and answers its own width. Check runs the rules in the browser and is labelled indicative; the last result stays until the next Check and says when the diagram changed since. `readOnly` keeps the brief and the checks beside a locked canvas. `submit` is dropped for `requestSave` (above). | The student needs the editing tools to solve a challenge; the score that counts is always the host's, from its server. |
 | 39 | **What the simulation engine computes** (M4, `packages/engine/src/sim.ts`), fixing what section 13.4 leaves open. Each 1 s tick: (1) apply the events due; (2) offered load at each source is the last `rps` point at or before t (a step, so a spike is sudden); (3) blocks are visited in **flow order** (request and async connections, plus a queue's outgoing connections, sorted topologically, id order breaking ties; a cycle is an error naming its blocks); (4) a block accepts `min(arrival, instances × capacity)` (0 when failed) and only what it accepts calls onward; (5) a load balancer splits what it accepts across healthy targets (not failed, connection not cut), by `share` if set, else evenly; any other block calls every request dependency with the full rate (or `share` × rate); (6) **cache-aside**: when a block has request connections to a cache and to a database-category block, the database gets only the misses, `1 − hitRate × the cache's accept ratio`, the cache's ratio taken from the previous tick (one tick of lag, so the order stays simple and deterministic); a cache that rejects is a miss, not an error; (7) **queues** (messaging roles) drain first, then accept new messages up to their rate and free space; the blocks a queue connects to are its consumers and drain it at their full capacity × the `backlog` factor, split evenly; an async call succeeds when its message is accepted; (8) data connections carry no traffic; (9) **served** for a request accepted at a block is the product over its calls of (the callee's accept ratio × the callee's own served share), a load balancer's the split-weighted average over its targets, cache-aside's `hit + miss × database`; a source's served share is the product over its calls; a call with `share` s counts as `1 − s + s × its success` (the other requests do not make it), and adds s × its time to latency; load enters only at client-category blocks; (10) latency per call is `latency ÷ (1 − min(util, 0.95))`, a chain's is its own plus its calls in turn (load balancer: weighted average; cache-aside: cache plus miss × database; async: the queue's only), and a tick's p95 is twice the slowest served source chain; (11) autoscaling adds instances to bring utilisation to the threshold after 30 s above it, live after `warmup` (default 60 s), and removes them after 60 s under half the threshold; functions follow demand at once (0 to 1,000) with +300 ms on a tick that added instances; (12) a failed zone switches off every block in it and in zones nested in it; `recover` clears fail, cut and slow on its target. Run results: error rate over the whole run, p95 as the 95th percentile of the ticks' p95, the longest queue, and the verdict of 13.4; the **bottleneck** is the block with the highest peak utilisation at or over 100 %; a **single point of failure** is a block or zone whose failure alone drops served below 1 − the error threshold at the scenario's starting load, while the design without that failure meets it (one tick each, no autoscaling: failure, not overload). Values are rounded to 3 decimals each tick; no clock, no Math.random. | Every ambiguous case has one stated answer before code, so the browser, the checker and a teacher reading a result agree on what the numbers mean. |
 | 40 | **Simulate mode as built** (Screen E): a Design / Simulate switch in the top bar (icons under 1,600 px); the scenario panel's presets build one scenario file (Steady load and Traffic spike are one or the other; the spike is a step); Run computes the whole run in a Web Worker at once, then the timeline plays it at ×1, ×10 or ×60 (Space plays and pauses, the range input scrubs); the canvas shows the current second: blocks fill with their load and say Busy or Over capacity in words, switched-off blocks and zones go grey with an Off or down label, connections show their rate and moving dots (still under reduced motion), and dead ones are dashed red; the results panel gives the verdict for the whole run, the tiles for the current second and what happened when; a selected block shows its capacity settings there (empty fields show the role default; undoable; kept in the file), and any edit marks the run out of date. Nothing on the canvas moves in Simulate. Save scenario and Open scenario read and write `archboard-scenario` files. In the dark theme the load fill is fainter so the block's own labels keep AA contrast. Not built yet: Step (one request, narrated), recovery events in the presets, the seed. | The run is fast (0.25 s for 300 s), so playing a finished run is simpler and smoother than streaming ticks, and scrubbing is free. |
+| 41 | **Accounts and online saving** (2026-11-21, asked for by the instructor; section 8.4). This reverses "no accounts" (section 10) and widens decision 8. A separate public service, `apps/cloud`, not the checker (which stays stateless and internal); one address for the editor and the API; GitHub and Google sign-in, no passwords (no reset email to send, nothing to leak), GitHub first because it is the simplest to register and its localhost callback works; only a provider id and a name kept; optimistic versions with a 409 conflict the person settles; the browser autosave kept as the offline buffer; nothing left behind on sign-out; never in an embed. Turning it on needs the instructor's OAuth apps and an https address (`docs/cloud-deploy.md`); storing people's names and diagrams on the instructor's server is the instructor's call. | People asked to keep their work across computers; passwords would need email for resets and a breach would leak them; one address avoids third-party cookies and CORS; a conflict never overwrites anyone's work silently. |
 
 Also decided by the instructor (2026-11-20): **AWS icons get rounded corners** to match the stickers (they fill the sticker and
 are clipped to its corner radius, as are the AWS zone icons in tabs). AWS's icon guidelines ask that icons not be cropped;

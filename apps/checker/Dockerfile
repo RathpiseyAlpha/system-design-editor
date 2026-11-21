@@ -9,6 +9,7 @@ COPY package.json package-lock.json ./
 COPY packages/engine/package.json packages/engine/
 COPY apps/editor/package.json apps/editor/
 COPY apps/checker/package.json apps/checker/
+COPY apps/cloud/package.json apps/cloud/
 RUN npm ci --workspace @archboard/checker --ignore-scripts --no-audit --no-fund
 COPY packages/engine packages/engine
 COPY apps/checker apps/checker

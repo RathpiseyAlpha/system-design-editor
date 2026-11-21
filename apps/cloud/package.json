@@ -1,0 +1,19 @@
+{
+  "name": "@archboard/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Accounts and online saving (SPEC section 8.3): sign-in, sessions and each person's diagrams, and the editor's files, from one address.",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node --disable-warning=ExperimentalWarning dist/server.js"
+  },
+  "dependencies": {
+    "@archboard/engine": "0.1.0",
+    "@hono/node-server": "2.1.6",
+    "hono": "4.13.16"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

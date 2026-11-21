@@ -435,3 +435,48 @@ button.pal-item:active { cursor: grabbing; }
 .dot { fill: var(--port); stroke: var(--edge); stroke-width: 1.25; pointer-events: none; }
 .pill.bad rect.face { fill: var(--bad-soft); stroke: var(--bad); } .pill.bad .shadow { fill: var(--bad); } .pill.bad text { fill: var(--bad); }
 .pill.warn rect.face { fill: var(--warn-soft); stroke: var(--warn); } .pill.warn .shadow { fill: var(--warn); } .pill.warn text { fill: var(--warn); }
+
+/* ---------------- accounts and online saving (SPEC section 8.3) */
+.btn--accent { background: var(--marker); color: var(--marker-ink); }
+.chip-btn { cursor: pointer; font: 600 12px/16px var(--font-mono); }
+.account { position: relative; flex: none; width: 36px; height: 36px; border-radius: 50%; border: var(--bw) solid var(--edge); background: var(--marker);
+  color: var(--marker-ink); box-shadow: var(--pop-sm); display: grid; place-items: center; }
+.account-badge { font: 800 15px/1 var(--font-mono); pointer-events: none; }
+.account-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: var(--t-ui); }
+.account:hover { transform: var(--lift); box-shadow: var(--pop); }
+.account:has(.account-select:focus-visible) { outline: 3px solid var(--marker-strong); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* The top bar is full at every width once the account menu is in it: the theme is the icon button everywhere, and under
+   1,600 px the brand is its mark alone, so the diagram's name keeps room for about 15 characters. */
+@container app (max-width: 1599px) { .brand-name { display: none; } }
+@container app (max-width: 1439px) { .file-select { width: 92px; } }
+.theme-select { display: none; }
+.theme-btn { display: inline-flex; }
+.signin-select { width: auto; flex: none; }
+.signin-btn { flex: none; }
+.modal { width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: var(--bw) solid var(--edge); border-radius: var(--r-panel);
+  background: var(--sheet); color: var(--ink); box-shadow: var(--pop-lg); overflow: auto; }
+.modal--wide { width: min(640px, calc(100vw - 32px)); }
+.modal::backdrop { background: color-mix(in srgb, var(--ink) 35%, transparent); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px var(--s3) 10px var(--s4); border-bottom: 1px solid var(--line); }
+.modal-head h2 { margin: 0; font: 700 15px/22px var(--font-mono); }
+.modal-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--s4); }
+.modal-text, .modal-empty, .modal-form, .modal-error, .modal-actions, .modal-choices { margin: 0; padding: var(--s3) var(--s4) 0; }
+.modal-text, .modal-empty { font: 400 14px/21px var(--font-prose); }
+.modal-empty { color: var(--muted); padding-bottom: var(--s4); }
+.modal-error { color: var(--bad); font: 600 13px/19px var(--font-prose); }
+.modal-form { display: grid; gap: var(--s3); padding-bottom: var(--s4); }
+.modal-form .modal-actions, .modal-form .modal-error { padding: 0; }
+.modal-actions { display: flex; gap: var(--s2); padding-bottom: var(--s4); }
+.modal-choices { display: grid; gap: var(--s2); padding-bottom: var(--s4); }
+.modal-choices .btn { display: grid; justify-items: start; gap: 2px; text-align: left; white-space: normal; padding: 8px 14px; }
+.modal-choices .btn span { font: 400 13px/18px var(--font-prose); }
+.hint { font: var(--t-hint); color: var(--muted); }
+.doc-list { list-style: none; margin: 0; padding: 0 var(--s4) var(--s4); display: grid; gap: 6px; }
+.doc-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--s3); padding: 8px 10px;
+  border: var(--bw-fine) solid var(--line); border-radius: var(--r-control); background: var(--paper); }
+.doc-list li.is-current { border-color: var(--edge); background: var(--marker-soft); }
+.doc-name { font: 600 13px/19px var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.doc-when { font: var(--t-hint); color: var(--muted); white-space: nowrap; }
+.doc-actions { display: flex; gap: 6px; }
+.doc-list li:has(.btn--danger) { grid-template-columns: minmax(0, 1fr) auto; }

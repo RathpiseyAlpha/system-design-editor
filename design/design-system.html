@@ -549,7 +549,15 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
           <span class="chip">8 services</span>
           <span><span class="kbd">Ctrl</span> <span class="kbd">Z</span></span>
         </div>
-        <p class="note" style="margin:0">"Show as" picks the icon pack. Below 1440px wide it becomes a select so the top bar fits a 1280px laptop.</p>
+        <div class="row" aria-label="Accounts">
+          <span class="chip chip--ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 18h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.4 9.1 4.5 4.5 0 0 0 7 18z"/></svg>Saved</span>
+          <span class="chip chip--warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.4 9.1 4.5 4.5 0 0 0 7 18z"/><path d="M4 4l16 16"/></svg>Offline</span>
+          <span class="chip chip--bad"><svg><use href="#i-alert"/></svg>Conflict</span>
+          <button class="btn" type="button" style="background:var(--marker); color:var(--marker-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Sign in</button>
+          <span aria-label="Account: Dara" style="width:36px; height:36px; border-radius:50%; border:var(--bw) solid var(--edge); background:var(--marker); color:var(--marker-ink); box-shadow:var(--pop-sm); display:inline-grid; place-items:center; font:800 15px/1 var(--font-mono)">D</span>
+        </div>
+        <p class="note" style="margin:0">"Show as" picks the icon pack. Below 1440px wide it becomes a select so the top bar fits a 1280px laptop.
+          Signed in (decision 41, where the editor is served by the cloud service), the save chip shows a cloud: Saved, Saving…, Offline (kept in this browser, sent when the connection returns), Conflict (opens the choice). The account is a round badge with the initial at the right end; its menu is My diagrams, Sign out, Delete account. The theme is the icon button at every width, so the bar fits at 1280px.</p>
       </div>
       <div class="panel" style="display:grid; gap: var(--s3)">
         <h3 style="margin:0">Palette search across packs</h3>
