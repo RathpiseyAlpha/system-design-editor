@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomIdentity, zoomTransform, type ZoomBehavior } from 'd3-zoom';
-import type { Diagram, DZone, ZoneKind } from '@archboard/engine';
+import type { DEdge, Diagram, DZone, ZoneKind } from '@archboard/engine';
 import { useEditor, type Drag } from '../state/store.ts';
 import { moveZone, resizeZone } from '../state/ops.ts';
 import { Block, Pill, Wire, ZoneResize, ZoneShape, ZoneTab, zoneTabWidth } from './parts.tsx';
@@ -12,6 +12,11 @@ import { Icon } from '../ui/Icon.tsx';
 import { presentSteps } from '../present/steps.ts';
 import { startPresenting } from '../present/PresentBar.tsx';
 import { runLayout } from '../layout/runLayout.ts';
+import { useSim } from '../sim/store.ts';
+import { stateAt } from '../sim/scenario.ts';
+
+/** A rate for a connection label: 1,250/s, 3.4k/s above 10,000. */
+const fmtRate = (r: number) => (r >= 10_000 ? `${(r / 1000).toFixed(1)}k/s` : `${Math.round(r).toLocaleString('en-US')}/s`);
 
 /** Drag-and-drop type for palette items: a role id, or "zone:<kind>[:<access>]". */
 export const ROLE_MIME = 'application/x-archboard-role';
@@ -19,7 +24,9 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5;
 const ARROWS: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
 const NO_PAN = '[data-block], [data-zone-tab], [data-handle]';
 /** Present mode and the view-only embed: the canvas can be panned and zoomed, nothing else. */
-const readOnly = () => { const s = useEditor.getState(); return s.presenting || s.viewOnly; };
+const readOnly = () => { const s = useEditor.getState(); return s.presenting || s.viewOnly || s.mode === 'simulate'; };
+/** Simulate mode: nothing on the canvas moves, but a block can be picked (its capacity settings show in the results panel). */
+const simulating = () => { const s = useEditor.getState(); return s.mode === 'simulate' && !s.presenting && !s.viewOnly; };
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PRESENT_ZOOM_MAX = 1.6;
 /** Room kept free under the diagram for the present bar. */
@@ -70,6 +77,7 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
   const drag = useEditor((s) => s.drag);
   const turn = useEditor((s) => s.turn);
   const flat = useEditor((s) => s.flat);
+  const simOn = useEditor((s) => s.mode === 'simulate');
   const proj = projectionOf(flat);
   // The scene draws the file as the turned view sees it (Rotate view); handlers turn edits back into file coordinates.
   const d = useMemo(() => rotateDiagram(withDrag(doc, drag), turn), [doc, drag, turn]);
@@ -92,23 +100,36 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
       placeLabels(
         [
           ...zones.map((z) => { const width = zoneTabWidth(z, pack); return { id: z.id, width, at: tabCandidates(z, proj, width) }; }),
-          ...wires.filter((w) => w.e.label).map((w) => ({ id: w.e.id, width: pillWidth(w.e.label!), at: edgeLabelCandidates(w.screen) })),
+          // In Simulate every connection shows its rate: places are made for the widest rate, so labels stay put while it plays.
+          ...wires.filter((w) => w.e.label || simOn).map((w) => ({ id: w.e.id, width: pillWidth(simOn ? `${w.e.label ? `${w.e.label} ` : ''}99,999/s` : w.e.label!), at: edgeLabelCandidates(w.screen) })),
         ],
         d.nodes.map((n) => blockBox(n, proj)),
       ),
-    [zones, wires, d.nodes, pack, proj],
+    [zones, wires, d.nodes, pack, proj, simOn],
   );
   const selZone = d.zones.find((z) => z.id === selected);
+  // Simulate mode: the run's numbers at the current second, and what is down or cut by then (SPEC section 13.1).
+  const tick = useSim((s) => (simOn && s.result ? s.result.ticks[s.at] ?? null : null));
+  const ranScenario = useSim((s) => (simOn ? s.ran?.scenario ?? null : null));
+  const down = useMemo(() => (tick && ranScenario ? stateAt(ranScenario, tick.t) : null), [tick, ranScenario]);
+  const offZone = (z: DZone): boolean => {
+    for (let p: DZone | undefined = z, i = 0; p && i < 40; p = d.zones.find((o) => o.id === p!.parent), i++) if (down?.zones.has(p.id)) return true;
+    return false;
+  };
+  const rateText = (e: DEdge) => `${e.label ? `${e.label} ` : ''}${fmtRate(tick?.edges[e.id] ?? 0)}`;
 
   return (
     <>
-      {zones.map((z) => <ZoneShape key={z.id} z={z} selected={z.id === selected} flat={flat} />)}
-      {wires.map(({ e, screen }) => <Wire key={e.id} id={e.id} points={screen} kind={e.kind} selected={e.id === selected} name={`${byId.get(e.from)?.label ?? e.from} to ${byId.get(e.to)?.label ?? e.to}`} onKeyDown={h.onEdgeKeyDown} />)}
-      {nodes.map((n) => (
-        <Block key={n.id} node={n} pack={pack} selected={selected === n.id} flat={flat} onPointerDown={h.onBlockPointerDown} onKeyDown={h.onBlockKeyDown} />
+      {zones.map((z) => <ZoneShape key={z.id} z={z} selected={z.id === selected} flat={flat} off={offZone(z)} />)}
+      {wires.map(({ e, screen }) => (
+        <Wire key={e.id} id={e.id} points={screen} kind={e.kind} selected={e.id === selected} name={`${byId.get(e.from)?.label ?? e.from} to ${byId.get(e.to)?.label ?? e.to}`} onKeyDown={h.onEdgeKeyDown}
+          traffic={tick ? { rate: tick.edges[e.id] ?? 0, dead: !!down?.cut.has(e.id) || !!tick.nodes[e.to]?.failed } : undefined} />
       ))}
-      {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} at={labelAt.get(z.id)!} onPointerDown={h.onZonePointerDown} onKeyDown={h.onZoneKeyDown} />)}
-      {wires.filter((w) => w.e.label).map(({ e }) => { const at = labelAt.get(e.id)!; return <Pill key={e.id} x={at[0]} y={at[1]} text={e.label!} />; })}
+      {nodes.map((n) => (
+        <Block key={n.id} node={n} pack={pack} selected={selected === n.id} flat={flat} onPointerDown={h.onBlockPointerDown} onKeyDown={h.onBlockKeyDown} load={tick?.nodes[n.id]} />
+      ))}
+      {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} at={labelAt.get(z.id)!} onPointerDown={h.onZonePointerDown} onKeyDown={h.onZoneKeyDown} down={offZone(z)} />)}
+      {wires.filter((w) => w.e.label || tick).map(({ e }) => { const at = labelAt.get(e.id)!; return <Pill key={e.id} x={at[0]} y={at[1]} text={tick ? rateText(e) : e.label!} />; })}
       {selZone && <ZoneResize z={selZone} flat={flat} onPointerDown={h.onResizePointerDown} />}
     </>
   );
@@ -152,6 +173,7 @@ export function Canvas() {
   const presenting = useEditor((s) => s.presenting);
   const step = useEditor((s) => s.step);
   const viewOnly = useEditor((s) => s.viewOnly);
+  const sim = useEditor((s) => s.mode === 'simulate');
   const anim = useRef(0);
   const svgRef = useRef<SVGSVGElement>(null);
   const layerRef = useRef<SVGGElement>(null);
@@ -234,6 +256,7 @@ export function Canvas() {
       // Press a block: in "Connect to" mode, connect; on a port, draw a connection; otherwise select and drag it
       // (snapped to half cells, drawn at the drag position, committed once on drop as one undo step).
       onBlockPointerDown: (e, id) => {
+        if (e.button === 0 && simulating()) { useEditor.getState().select(id); return; }
         if (e.button !== 0 || readOnly()) return;
         e.preventDefault();
         const st = useEditor.getState();
@@ -258,6 +281,7 @@ export function Canvas() {
       // Keyboard on a focused block: Enter or Space selects (or connects, in "Connect to" mode), arrows move one cell
       // along the grid, Delete removes it.
       onBlockKeyDown: (e, id) => {
+        if (simulating() && (e.key === 'Enter' || e.key === ' ')) { useEditor.getState().select(id); e.preventDefault(); e.stopPropagation(); return; }
         if (readOnly()) return;
         const s = useEditor.getState();
         const arrow = ARROWS[e.key];
@@ -385,8 +409,9 @@ export function Canvas() {
 
   // A click (not a pan) picks what is under it: a connection, a zone, or nothing.
   const onClick = (ev: MouseEvent) => {
-    if (readOnly()) return;
     const t = ev.target as Element;
+    if (simulating()) { if (!t.closest('[data-block]')) useEditor.getState().select(null); return; }
+    if (readOnly()) return;
     if (t.closest('[data-block], [data-zone-tab], [data-handle]')) return;
     const s = useEditor.getState();
     if (s.connectFrom) { s.setConnectFrom(null); return; }
@@ -439,15 +464,15 @@ export function Canvas() {
           <button type="button" aria-pressed={!flat} aria-label="3D view" title="Blocks in 3D" onClick={() => useEditor.getState().setFlat(false)}><Icon name="cube" /><span className="lbl">3D</span></button>
           <button type="button" aria-pressed={flat} aria-label="Flat view" title="Seen from above, like a plan" onClick={() => useEditor.getState().setFlat(true)}><Icon name="flat" /><span className="lbl">Flat</span></button>
         </div>
-        {!viewOnly && (
+        {!viewOnly && !sim && (
           <button className="btn btn--sm" type="button" title="Arrange the whole diagram left to right" aria-label="Auto-layout" disabled={laying} onClick={layOut}>
             <Icon name="layout" /><span className="lbl">{laying ? 'Laying out…' : 'Auto-layout'}</span>
           </button>
         )}
         <button className="btn btn--sm" type="button" title="Rotate view (R)" aria-label="Rotate view" onClick={() => useEditor.getState().rotate()}><Icon name="rotate" /><span className="lbl">Rotate view</span></button>
-        <button className="btn btn--sm" type="button" title="Present: the whole diagram, then each zone (P)" aria-label="Present" onClick={() => startPresenting()}><Icon name="play" /><span className="lbl">Present</span></button>
+        {!sim && <button className="btn btn--sm" type="button" title="Present: the whole diagram, then each zone (P)" aria-label="Present" onClick={() => startPresenting()}><Icon name="play" /><span className="lbl">Present</span></button>}
       </div>}
-      {!presenting && <div className="zoombar">
+      {!presenting && <div className={`zoombar${sim ? ' top' : ''}`}>
         <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}><Icon name="minus" /></button>
         <span ref={zoomLabel} className="zoom-val">100%</span>
         <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1.25)}><Icon name="plus" /></button>

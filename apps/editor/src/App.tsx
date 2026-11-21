@@ -8,6 +8,8 @@ import { Inspector } from './ui/Inspector.tsx';
 import { PresentBar, startPresenting, stopPresenting, stepBy } from './present/PresentBar.tsx';
 import { PanelBoundary } from './ui/PanelBoundary.tsx';
 import { LearnPanel } from './learn/LearnPanel.tsx';
+import { ResultsPanel, RunBar, ScenarioPanel } from './sim/SimPanels.tsx';
+import { useSim } from './sim/store.ts';
 
 // The text view loads only when it is opened, so the editor starts without CodeMirror.
 // A failed import is not cached by lazy(), so Retry (a new attempt number) makes a new lazy component that loads again.
@@ -22,13 +24,16 @@ function StatusBar() {
   const n = useEditor((s) => s.diagram.nodes.length);
   const e = useEditor((s) => s.diagram.edges.length);
   const z = useEditor((s) => s.diagram.zones.length);
+  const sim = useEditor((s) => s.mode === 'simulate');
   return (
     <footer className="statusbar">
       <span className="chip">{n} blocks</span>
       <span className="chip">{e} connections</span>
       <span className="chip">{z} zones</span>
       <span className="spacer" />
-      <span>Drag to move, arrows move one cell, <kbd>A</kbd> to add, <kbd>Del</kbd> to delete, <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo</span>
+      {sim
+        ? <span>Press <kbd>Space</kbd> to run or pause; select a block to change its capacity</span>
+        : <span>Drag to move, arrows move one cell, <kbd>A</kbd> to add, <kbd>Del</kbd> to delete, <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo</span>}
     </footer>
   );
 }
@@ -82,6 +87,19 @@ function useShortcuts() {
         else if (e.key.toLowerCase() === 'p') { e.preventDefault(); startPresenting(); }
         return;
       }
+      // Simulate mode: Space runs, pauses or plays; nothing on the canvas is edited (capacity settings can be undone).
+      if (s.mode === 'simulate') {
+        if (mod && e.key.toLowerCase() === 'z' && !typing(e.target)) { e.preventDefault(); if (e.shiftKey) s.redo(); else s.undo(); return; }
+        if (typing(e.target) || mod || e.altKey) return;
+        if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) {
+          e.preventDefault();
+          const sim = useSim.getState();
+          if (!sim.result || sim.ran?.diagram !== s.diagram) void sim.run(s.diagram);
+          else sim.play(!sim.playing);
+        } else if (e.key === 'Escape') s.select(null);
+        else if (e.key.toLowerCase() === 'r') { e.preventDefault(); s.rotate(); }
+        return;
+      }
       if (e.key === 'Escape' && s.connectFrom) { s.setConnectFrom(null); return; }
       if (mod && e.key.toLowerCase() === 'z' && !typing(e.target)) { e.preventDefault(); if (e.shiftKey) s.redo(); else s.undo(); return; }
       if (mod && e.key.toLowerCase() === 'y' && !typing(e.target)) { e.preventDefault(); s.redo(); return; }
@@ -104,6 +122,7 @@ export function App() {
   const presenting = useEditor((s) => s.presenting);
   const viewOnly = useEditor((s) => s.viewOnly);
   const embedNote = useEditor((s) => s.embedNote);
+  const mode = useEditor((s) => s.mode);
   const learning = useEditor((s) => s.learn !== null && s.embedNote === null);
   const canvas = (
     <div className="canvas-wrap">
@@ -144,6 +163,24 @@ export function App() {
       <div className="app app--view">
         <Sprite />
         {learning ? <div className="body-learn"><LearnPanel /><div className="learn-main">{view}</div></div> : view}
+      </div>
+    );
+  }
+  if (mode === 'simulate') {
+    return (
+      <div className="app">
+        <Sprite />
+        <TopBar />
+        <div className="simgrid">
+          <ScenarioPanel />
+          <div className="canvas-wrap">
+            <NoticeBar />
+            <Canvas />
+            <RunBar />
+          </div>
+          <ResultsPanel />
+        </div>
+        <StatusBar />
       </div>
     );
   }

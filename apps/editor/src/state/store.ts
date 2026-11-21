@@ -39,6 +39,8 @@ interface EditorState {
   layout: 'canvas' | 'split' | 'code';
   /** Which document the side panel shows in Split and Code: the diagram as text, or its Markdown notes. */
   side: 'text' | 'notes';
+  /** Design (draw and edit) or Simulate (run scenarios on the diagram as it is; nothing moves, capacity settings change). */
+  mode: 'design' | 'simulate';
   /** Present mode: only the canvas, nothing can be changed, the arrow keys step from the whole diagram to each zone. */
   presenting: boolean;
   /** The present step being shown (0 is the whole diagram). */
@@ -72,6 +74,7 @@ interface EditorState {
   setLayout: (l: 'canvas' | 'split' | 'code') => void;
   setSide: (side: 'text' | 'notes') => void;
   present: (on: boolean) => void;
+  setMode: (m: 'design' | 'simulate') => void;
   setStep: (step: number) => void;
   /** Replace the diagram's notes; typing is one undo step. */
   setNotes: (text: string) => void;
@@ -149,6 +152,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   flat: false,
   layout: 'canvas',
   side: 'text',
+  mode: 'design',
   presenting: false,
   step: 0,
   viewOnly: EMBED.embed,
@@ -219,6 +223,7 @@ export const useEditor = create<EditorState>()((set, get) => ({
   setSide: (side) => set({ side }),
   present: (on) => set({ presenting: on, step: 0, selected: null, connectFrom: null, drag: null }),
   setStep: (step) => set({ step }),
+  setMode: (mode) => set({ mode, layout: 'canvas', connectFrom: null, drag: null }),
   check: () => {
     const s = get();
     if (!s.learn?.rules) return;

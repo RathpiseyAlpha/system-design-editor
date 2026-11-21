@@ -7,7 +7,7 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3's editor side is built: rule engine (`packages/engine/src/rules.ts`, decision 35), checker service (`apps/checker`, decision 37), embed edit and learn modes with the learning panel (`learn/`, decision 38), first challenge (`challenges/`); left for M3: the labsite page (`docs/labsite-host.md`) and use in class. M4 started: the simulation engine `packages/engine/src/sim.ts` (decision 39, tested); the Simulate mode UI, the worker and the checker's `lab` form are next.** M2 added: diagram as
+**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3's editor side is built: rule engine (`packages/engine/src/rules.ts`, decision 35), checker service (`apps/checker`, decision 37), embed edit and learn modes with the learning panel (`learn/`, decision 38), first challenge (`challenges/`); left for M3: the labsite page (`docs/labsite-host.md`) and use in class. M4: the engine `packages/engine/src/sim.ts` (decision 39) and Simulate mode (`sim/`, decision 40) are built; Step-through, recovery presets and the checker's `lab` form (M5) are next.** M2 added: diagram as
 code (Split and Code views, CodeMirror, two-way sync, errors on their line, `packages/engine/src/text.ts`); Auto-layout with ELK
 in a Web Worker (`layout/`); the flat top-down view (`Projection` in `canvas/geometry.ts`); Markdown notes beside the text
 (`notes/`); Present mode (`present/`); the read-only embed `/embed/?mode=view&origin=…` (`embed/`, decision 32). The editor core works: engine package (format, roles, six templates); 3D canvas with
@@ -128,6 +128,9 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
   the server (equal to the editor's own check), restore, readOnly, a hostile brief, and layout, axe, contrast and Tab at four
   sizes in both themes. Challenges live in `challenges/` with a `.solution.json` each (tested in `challenges.test.ts`).
   labsite's side is written up in `docs/labsite-host.md`.
+- Simulate mode (`python -I tools/check_sim.py`, preview on 4319): presets, Run in the worker, the canvas at chosen
+  seconds, Save and Open scenario, capacity settings, Space, and the same numbers from Node (`tools/sim_node.mjs` runs the
+  engine source through esbuild), plus layout, axe, contrast and Tab at four sizes in both themes.
 - Quality check (SPEC section 9: first paint, 150 blocks panning, axe-core in both themes, Tab and focus rings, reduced
   motion, no third-party requests, offline): `python -I tools/check_quality.py` with the preview on 4319. Restart the preview
   after a build (it lists the files once). A new screen or panel gets an axe pass there. Small coloured text uses the

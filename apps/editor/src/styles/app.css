@@ -148,7 +148,13 @@ svg.iso text { font-family: var(--font-mono); fill: var(--ink); }
 .zoombar button svg { width: 15px; height: 15px; }
 
 /* ---------------- responsive: the editor answers its own size (SPEC section 9) */
-@container app (max-width: 1599px) { .body3 { grid-template-columns: 240px minmax(0, 1fr) 296px; } }
+@container app (max-width: 1599px) {
+  .body3 { grid-template-columns: 240px minmax(0, 1fr) 296px; }
+  /* Under 1600 px the Design / Simulate switch shows icons (with names for screen readers and tooltips), and Show as is a menu. */
+  .mode-seg .lbl { display: none; }
+  .pack-seg { display: none; }
+  .pack-select { display: inline-block; }
+}
 @container app (max-width: 1439px) {
   .pack-seg { display: none; }
   .pack-select { display: inline-block; }
@@ -348,3 +354,84 @@ button.pal-item:active { cursor: grabbing; }
 .learn-panel .rules .chip { box-shadow: none; white-space: nowrap; }
 .learn-note { margin: 0; font: var(--t-hint); color: var(--muted); }
 @container app (max-width: 1439px) { .body-learn { grid-template-columns: 300px minmax(0, 1fr); } }
+
+/* ---------------- Simulate mode (design page, Screen E; SPEC section 13.1) */
+.simgrid { display: grid; grid-template-columns: 272px minmax(0, 1fr) 288px; min-height: 0; }
+@container app (max-width: 1365px) { .simgrid { grid-template-columns: 256px minmax(0, 1fr) 280px; } }
+.side--scn { border-right: var(--bw) solid var(--edge); }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--s3); border-bottom: 1px solid var(--line); }
+.panel-head h3 { margin: 0; font: 700 14px/20px var(--font-mono); }
+.panel-head .dur { display: flex; align-items: center; gap: 6px; font: var(--t-hint); color: var(--muted); }
+.scn-list { display: grid; gap: 4px; padding: var(--s2); overflow: auto; align-content: start; min-height: 0; flex: 1; }
+.scn { border: var(--bw-fine) solid transparent; border-radius: var(--r-control); padding: 5px 8px; display: grid; grid-template-columns: 1fr; gap: 2px; }
+.scn-pick { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.scn input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--marker-strong); }
+.scn b { font: 700 12px/18px var(--font-mono); }
+.scn small { padding-left: 24px; font: var(--t-hint); color: var(--muted); }
+.scn.on { border-color: var(--edge); background: var(--paper); box-shadow: var(--pop-sm); }
+.scn:not(.on) small { display: none; }
+.scn .fields { padding-left: 24px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; font: var(--t-hint); }
+.scn .fields .input, .expect .input, .panel-head .input { min-height: 28px; padding: 2px 6px; font-size: 12px; }
+.scn .fields .select { width: 120px; }
+.scn-file { padding: var(--s3); display: grid; gap: var(--s2); font: var(--t-small); flex: 1; align-content: start; }
+.scn-file p { margin: 0; }
+.scn-errors { padding: 8px var(--s3); border-top: 1px solid var(--line); display: grid; gap: 4px; background: var(--warn-soft); }
+.scn-errors p { margin: 0; display: flex; gap: 6px; font: var(--t-small); color: var(--ink); }
+.scn-errors svg { width: 14px; height: 14px; flex: none; margin-top: 2px; color: var(--warn); }
+.expect { border-top: 1px solid var(--line); padding: 8px var(--s3) 10px; font: var(--t-hint); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.runbar { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-control); box-shadow: var(--pop-sm); }
+.runbar .seg button { padding: 2px 7px; }
+.timeline { position: relative; flex: 1; height: 30px; min-width: 120px; border-radius: 6px; }
+.timeline:focus-within { outline: 3px solid var(--marker-strong); outline-offset: 2px; }
+.timeline .track { position: absolute; left: 0; right: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--sunken); border: 1px solid var(--line); }
+.timeline .done { position: absolute; left: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--marker-strong); }
+.timeline .thumb { position: absolute; top: 8px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--marker); border: var(--bw) solid var(--edge); pointer-events: none; }
+.timeline .mark { position: absolute; top: 9px; width: 2px; height: 14px; background: var(--edge); }
+.timeline .mark.bad { background: var(--bad); }
+/* The real control: a range input over the drawn track, invisible but focusable and draggable. */
+.timeline input[type="range"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.clock { font: 700 12px/16px var(--font-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.zoombar.top { bottom: 72px; }
+.sim-results { overflow: auto; }
+.results { padding: var(--s3); display: grid; gap: var(--s3); align-content: start; min-height: 0; }
+.sim-h { margin: 0; font: 700 13px/18px var(--font-mono); }
+.sim-empty { margin: 0; font: var(--t-small); color: var(--muted); }
+.verdict { border: var(--bw) solid var(--bad); border-radius: var(--r-control); background: var(--bad-soft); box-shadow: 3px 3px 0 var(--bad); padding: 10px 12px; display: grid; gap: 6px; }
+.verdict.ok { border-color: var(--ok); background: var(--ok-soft); box-shadow: 3px 3px 0 var(--ok); }
+.verdict p { margin: 0; font: 400 13px/19px var(--font-prose); color: var(--ink); }
+.verdict .mono { font: 700 12px/16px var(--font-mono); }
+.verdict .hint { font: 600 12px/18px var(--font-mono); border-top: 1px dashed currentColor; padding-top: 6px; color: var(--ink); }
+.verdict .hint:empty { display: none; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tile { border: var(--bw-fine) solid var(--line); border-radius: var(--r-control); padding: 6px 8px; background: var(--paper); min-width: 0; }
+.tile small { display: block; font: var(--t-hint); color: var(--muted); }
+.tile b { font: 800 16px/22px var(--font-mono); font-variant-numeric: tabular-nums; }
+.tile span { font: var(--t-hint); color: var(--muted); }
+.tile.wide { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.events { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font: 400 12px/17px var(--font-prose); }
+.events li { display: grid; grid-template-columns: 38px 1fr; gap: 6px; }
+.events time { font: 700 12px/17px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.indicative { margin: 0; font: var(--t-hint); color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+.cap { display: grid; gap: 8px; padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.cap .note { margin: 0; font: var(--t-hint); color: var(--muted); }
+.cap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cap-grid label { font: var(--t-hint); color: var(--muted); }
+.cap-grid .input::placeholder { color: var(--muted); opacity: 1; }
+.chip--sm { font-size: 12px; padding: 0 8px; }
+.load { opacity: .5; }
+.load.ok { fill: var(--ok); } .load.warn { fill: var(--warn); } .load.bad { fill: var(--bad); }
+/* Dark theme: the light status colours would wash out the block's own light labels, so the fill is fainter there, and a
+   server's kind label takes its full ink (both AA, checked by tools/check_sim.py). */
+:root[data-theme="dark"] .load { opacity: .2; }
+:root[data-theme="dark"] .blk.server .sub { fill: var(--server-ink); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .load { opacity: .2; } :root:not([data-theme="light"]) .blk.server .sub { fill: var(--server-ink); } }
+/* Switched off: grey and faint, except its Off label, which must stay readable. */
+.blk.off > :not(.pill) { filter: grayscale(1); opacity: .55; }
+.blk.off .ol { stroke-dasharray: 5 4; }
+.zone.off .z-top { fill: var(--sunken); }
+.zone.off .z-ol { stroke: var(--bad); }
+.wire.dead { stroke: var(--bad); stroke-dasharray: 3 6; opacity: .8; }
+.dot { fill: var(--port); stroke: var(--edge); stroke-width: 1.25; pointer-events: none; }
+.pill.bad rect.face { fill: var(--bad-soft); stroke: var(--bad); } .pill.bad .shadow { fill: var(--bad); } .pill.bad text { fill: var(--bad); }
+.pill.warn rect.face { fill: var(--warn-soft); stroke: var(--warn); } .pill.warn .shadow { fill: var(--warn); } .pill.warn text { fill: var(--warn); }

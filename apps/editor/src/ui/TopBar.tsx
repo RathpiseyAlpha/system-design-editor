@@ -1,9 +1,11 @@
 import { useRef } from 'react';
-import { serializeDiagram, TEMPLATES } from '@archboard/engine';
+import { parseScenario, serializeDiagram, TEMPLATES } from '@archboard/engine';
 import { useEditor, EMBED, type Theme } from '../state/store.ts';
 import { PACKS, isPack } from '../catalog/packs.ts';
 import { Icon } from './Icon.tsx';
 import { exportImage } from './exportImage.ts';
+import { useSim } from '../sim/store.ts';
+import { buildScenario } from '../sim/scenario.ts';
 
 /** The brand mark: a tiny compute block. */
 function Mark() {
@@ -37,6 +39,26 @@ export function TopBar() {
   const layout = useEditor((s) => s.layout);
   const { setPack, setTheme, setTitle, undo, redo, newFromTemplate, openText } = useEditor.getState();
   const fileInput = useRef<HTMLInputElement>(null);
+  const scenarioInput = useRef<HTMLInputElement>(null);
+  const mode = useEditor((s) => s.mode);
+
+  // A scenario file (archboard-scenario v1): the ticked presets, or the one opened from a file.
+  const saveScenario = () => {
+    const d = useEditor.getState().diagram, sim = useSim.getState();
+    const built = sim.custom ? { ok: true as const, scenario: sim.custom } : buildScenario(sim.config, d);
+    if (!built.ok) { useSim.setState({ errors: built.errors }); return; }
+    const url = URL.createObjectURL(new Blob([`${JSON.stringify(built.scenario, null, 2)}\n`], { type: 'application/json' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `${fileName(built.scenario.title).replace(/\.archboard\.json$/, '')}.scenario.json` });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const openScenario = (text: string) => {
+    let data: unknown;
+    try { data = JSON.parse(text); } catch { useSim.setState({ errors: ['This file is not JSON.'] }); return; }
+    const r = parseScenario(data, useEditor.getState().diagram);
+    if (!r.ok) { useSim.setState({ errors: ['This scenario does not fit the diagram:', ...r.errors.slice(0, 6)] }); return; }
+    useSim.getState().setCustom(r.scenario);
+  };
 
   const download = () => {
     const d = useEditor.getState().diagram;
@@ -75,43 +97,60 @@ export function TopBar() {
         <span className="chip chip--warn" title="This browser blocks storage: use Save to keep your work"><Icon name="alert" />Not saved</span>
       )}
       <span className="spacer" />
-      <button className="btn btn--icon btn--ghost" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}><Icon name="undo" /></button>
-      <button className="btn btn--icon btn--ghost" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" /></button>
-      {/* In an embed the host owns the diagram: no New or Open, only a copy to save and pictures to export. */}
+      {/* Design or Simulate (SPEC section 13.1). Not in an embed: labs (M5) will turn Simulate on for a host. */}
       {!EMBED.embed && (
+        <div className="seg mode-seg" role="group" aria-label="Mode">
+          <button type="button" aria-pressed={mode === 'design'} aria-label="Design" title="Draw and edit the diagram" onClick={() => useEditor.getState().setMode('design')}><Icon name="pencil" /><span className="lbl">Design</span></button>
+          <button type="button" aria-pressed={mode === 'simulate'} aria-label="Simulate" title="Run problems against the diagram" onClick={() => useEditor.getState().setMode('simulate')}><Icon name="gauge" /><span className="lbl">Simulate</span></button>
+        </div>
+      )}
+      {mode === 'simulate' ? (
         <>
-          <select className="input select file-select" aria-label="New diagram" value="" onChange={(e) => { if (e.target.value) newFromTemplate(e.target.value); }}>
-            <option value="">New</option>
-            {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
+          <button className="btn" type="button" aria-label="Save scenario" title="Save the scenario as a file" onClick={saveScenario}><Icon name="download" /><span className="lbl">Save scenario</span></button>
+          <button className="btn" type="button" aria-label="Open scenario" title="Open a scenario file" onClick={() => scenarioInput.current?.click()}><Icon name="folder" /><span className="lbl">Open scenario</span></button>
+          <input ref={scenarioInput} type="file" accept=".json,application/json" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) openScenario(await f.text()); }} />
+        </>
+      ) : (
+        <>
+          <button className="btn btn--icon btn--ghost" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}><Icon name="undo" /></button>
+          <button className="btn btn--icon btn--ghost" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" /></button>
+          {/* In an embed the host owns the diagram: no New or Open, only a copy to save and pictures to export. */}
+          {!EMBED.embed && (
+            <>
+              <select className="input select file-select" aria-label="New diagram" value="" onChange={(e) => { if (e.target.value) newFromTemplate(e.target.value); }}>
+                <option value="">New</option>
+                {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
+              </select>
+              <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".json,application/json"
+                hidden
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (f) openText(await f.text(), f.name);
+                }}
+              />
+            </>
+          )}
+          <button className="btn" type="button" aria-label="Save the file" title="Save the diagram as a file" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
+          <select className="input select file-select" aria-label="Export a picture" value="" onChange={(e) => { const v = e.target.value; if (v === 'png' || v === 'svg') void exportPicture(v); }}>
+            <option value="">Export</option>
+            <option value="png">Export PNG picture</option>
+            <option value="svg">Export SVG picture</option>
           </select>
-          <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept=".json,application/json"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) openText(await f.text(), f.name);
-            }}
-          />
+          <span className="vsep" />
+          <div className="seg view-seg" role="group" aria-label="View">
+            {VIEWS.map((v) => (
+              <button key={v.id} type="button" aria-pressed={layout === v.id} aria-label={v.name} title={v.title} onClick={() => useEditor.getState().setLayout(v.id)}>
+                <Icon name={v.icon} /><span className="lbl">{v.name}</span>
+              </button>
+            ))}
+          </div>
         </>
       )}
-      <button className="btn" type="button" aria-label="Save the file" title="Save the diagram as a file" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
-      <select className="input select file-select" aria-label="Export a picture" value="" onChange={(e) => { const v = e.target.value; if (v === 'png' || v === 'svg') void exportPicture(v); }}>
-        <option value="">Export</option>
-        <option value="png">Export PNG picture</option>
-        <option value="svg">Export SVG picture</option>
-      </select>
-      <span className="vsep" />
-      <div className="seg view-seg" role="group" aria-label="View">
-        {VIEWS.map((v) => (
-          <button key={v.id} type="button" aria-pressed={layout === v.id} aria-label={v.name} title={v.title} onClick={() => useEditor.getState().setLayout(v.id)}>
-            <Icon name={v.icon} /><span className="lbl">{v.name}</span>
-          </button>
-        ))}
-      </div>
       <div className="seg pack-seg" role="group" aria-label="Show as">
         {PACKS.map((p) => (
           <button key={p.id} type="button" aria-pressed={pack === p.id} onClick={() => setPack(p.id)}>{p.name}</button>
