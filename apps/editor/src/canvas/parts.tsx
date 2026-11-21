@@ -236,11 +236,12 @@ export function ZoneShape({ z, selected, flat }: { z: DZone; selected?: boolean;
  * The zone's name tab, which is also its handle: drag it to move the zone with everything inside. Networks and regions label
  * their left corner (below the plate); other zones their right corner, where blocks rarely stand.
  */
-export function ZoneTab({ z, pack, at, onPointerDown }: { z: DZone; pack: PackId; at: Pt; onPointerDown?: (e: PointerEvent<SVGGElement>, id: string) => void }) {
+export function ZoneTab({ z, pack, at, onPointerDown, onKeyDown }: { z: DZone; pack: PackId; at: Pt; onPointerDown?: (e: PointerEvent<SVGGElement>, id: string) => void; onKeyDown?: (e: KeyboardEvent<SVGGElement>, id: string) => void }) {
   const { kind, icon } = zoneLabel(z.kind, z.access, pack);
   return (
-    <g className="tab-handle" data-zone-tab={z.id} onPointerDown={onPointerDown ? (e) => onPointerDown(e, z.id) : undefined}>
-      <title>Drag to move {z.label} and everything inside it</title>
+    <g className="tab-handle" data-zone-tab={z.id} tabIndex={0} role="button" aria-label={`${z.label}, ${kind}`}
+      onPointerDown={onPointerDown ? (e) => onPointerDown(e, z.id) : undefined} onKeyDown={onKeyDown ? (e) => onKeyDown(e, z.id) : undefined}>
+      <title>Drag, or use the arrow keys, to move {z.label} and everything inside it. Shift and arrows change its size.</title>
       <Pill x={at[0]} y={at[1]} text={z.label} sub={kind} icon={icon} />
     </g>
   );
@@ -264,9 +265,10 @@ export function ZoneResize({ z, flat, onPointerDown }: { z: DZone; flat?: boolea
 }
 
 /** A connection, with a wide invisible stroke on top so it is easy to click. */
-export function Wire({ id, points, kind, selected }: { id: string; points: Pt[]; kind: EdgeKind; selected: boolean }) {
+export function Wire({ id, points, kind, selected, name, onKeyDown }: { id: string; points: Pt[]; kind: EdgeKind; selected: boolean; name: string; onKeyDown?: (e: KeyboardEvent<SVGGElement>, id: string) => void }) {
   return (
-    <g className={`edge${selected ? ' selected' : ''}`} data-edge={id}>
+    <g className={`edge${selected ? ' selected' : ''}`} data-edge={id} tabIndex={0} role="button" aria-label={`Connection from ${name}, ${{ request: 'request', async: 'async message', data: 'data flow' }[kind]}`}
+      onKeyDown={onKeyDown ? (e) => onKeyDown(e, id) : undefined}>
       <polyline className="wire" data-kind={kind} points={pts(points)} markerEnd="url(#head)" />
       <polyline className="wire-hit" points={pts(points)} />
     </g>

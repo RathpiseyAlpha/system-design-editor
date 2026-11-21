@@ -312,8 +312,8 @@ try:
           const e = document.activeElement; if (!e || e === document.body) return false;
           if (window.__seen.has(e)) return true; window.__seen.add(e);
           const s = getComputedStyle(e), shadow = s.boxShadow !== 'none', outline = s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2;
-          // A block draws its focus as a thick marker-coloured outline (.ol) around its shape.
-          const ol = e.closest('svg') && e.querySelector('.ol'), ring = !!ol && parseFloat(getComputedStyle(ol).strokeWidth) >= 3;
+          // On the canvas the ring is drawn on the shape itself: a block's outline (.ol), a zone tab's face, a connection's line.
+          const ol = e.closest('svg') && e.querySelector('.ol, .pill rect.face, .wire'), ring = !!ol && parseFloat(getComputedStyle(ol).strokeWidth) >= 3;
           if (!(shadow || outline || ring)) window.__bad.push((e.getAttribute('aria-label') || e.textContent || e.tagName).trim().slice(0, 30));
           return false;""")
         if done:
@@ -351,6 +351,25 @@ try:
     time.sleep(0.6)
     b = p.js(view)
     check("reduced motion: Present jumps to the next step with no glide", start != a and a == b, f"{start} -> {a} -> {b}")
+finally:
+    p.close()
+
+# ------------------------------------------------------------------ 6a. no offline copy (no service worker), network gone
+p = Page("about:blank", 1280, 720)
+try:
+    p.call("Network.enable")
+    p.call("Network.setBypassServiceWorker", bypass=True)
+    p.goto(URL, wait=0.5)
+    p.js("localStorage.clear(); localStorage.setItem('archboard:theme','light');")
+    p.goto(URL, wait=3.0)
+    p.call("Network.emulateNetworkConditions", offline=True, latency=0, downloadThroughput=-1, uploadThroughput=-1)
+    p.js("document.querySelector('button[aria-label=\"Split\"]').click();")
+    alert = wait_for(p, "[...document.querySelectorAll('[role=alert]')].some(a => /could not be loaded/.test(a.textContent))", 20)
+    canvas = p.js("return document.querySelectorAll('[data-block]').length > 0 && !!document.querySelector('.topbar');")
+    check("a panel that cannot load says so with Retry, and the canvas keeps working", alert and canvas)
+    p.call("Network.emulateNetworkConditions", offline=False, latency=0, downloadThroughput=-1, uploadThroughput=-1)
+    p.js("[...document.querySelectorAll('[role=alert] button')].find(b => b.textContent.trim() === 'Retry').click();")
+    check("Retry loads the panel once the network is back", wait_for(p, "document.querySelector('.cm-content')", 20))
 finally:
     p.close()
 

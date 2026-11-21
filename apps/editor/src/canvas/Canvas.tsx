@@ -59,6 +59,8 @@ interface Handlers {
   onBlockPointerDown: (e: PointerEvent<SVGGElement>, id: string) => void;
   onBlockKeyDown: (e: KeyboardEvent<SVGGElement>, id: string) => void;
   onZonePointerDown: (e: PointerEvent<SVGGElement>, id: string) => void;
+  onZoneKeyDown: (e: KeyboardEvent<SVGGElement>, id: string) => void;
+  onEdgeKeyDown: (e: KeyboardEvent<SVGGElement>, id: string) => void;
   onResizePointerDown: (e: PointerEvent<SVGGElement>, id: string) => void;
 }
 
@@ -101,11 +103,11 @@ const Scene = memo(function Scene({ d: doc, h }: { d: Diagram; h: Handlers }) {
   return (
     <>
       {zones.map((z) => <ZoneShape key={z.id} z={z} selected={z.id === selected} flat={flat} />)}
-      {wires.map(({ e, screen }) => <Wire key={e.id} id={e.id} points={screen} kind={e.kind} selected={e.id === selected} />)}
+      {wires.map(({ e, screen }) => <Wire key={e.id} id={e.id} points={screen} kind={e.kind} selected={e.id === selected} name={`${byId.get(e.from)?.label ?? e.from} to ${byId.get(e.to)?.label ?? e.to}`} onKeyDown={h.onEdgeKeyDown} />)}
       {nodes.map((n) => (
         <Block key={n.id} node={n} pack={pack} selected={selected === n.id} flat={flat} onPointerDown={h.onBlockPointerDown} onKeyDown={h.onBlockKeyDown} />
       ))}
-      {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} at={labelAt.get(z.id)!} onPointerDown={h.onZonePointerDown} />)}
+      {zones.map((z) => <ZoneTab key={z.id} z={z} pack={pack} at={labelAt.get(z.id)!} onPointerDown={h.onZonePointerDown} onKeyDown={h.onZoneKeyDown} />)}
       {wires.filter((w) => w.e.label).map(({ e }) => { const at = labelAt.get(e.id)!; return <Pill key={e.id} x={at[0]} y={at[1]} text={e.label!} />; })}
       {selZone && <ZoneResize z={selZone} flat={flat} onPointerDown={h.onResizePointerDown} />}
     </>
@@ -267,6 +269,33 @@ export function Canvas() {
           const n = s.diagram.nodes.find((x) => x.id === id);
           if (n) { s.select(id); s.move(id, n.x + step[0], n.y + step[1]); }
         } else if (e.key === 'Delete' || e.key === 'Backspace') s.remove([id]);
+        else return;
+        e.preventDefault();
+        e.stopPropagation();
+      },
+      // Keyboard on a focused zone tab: Enter or Space selects, arrows move the zone (with everything inside) one cell,
+      // Shift and arrows change its size by one cell, Delete removes it.
+      onZoneKeyDown: (e, id) => {
+        if (readOnly()) return;
+        const s = useEditor.getState();
+        const arrow = ARROWS[e.key];
+        const step = arrow ? unrot(arrow[0], arrow[1], s.turn) : undefined;
+        const z = s.diagram.zones.find((x) => x.id === id);
+        if (!z) return;
+        if (e.key === 'Enter' || e.key === ' ') s.select(id);
+        else if (step && e.shiftKey) { s.select(id); s.resizeZone(id, z.w + step[0], z.h + step[1]); }
+        else if (step) { s.select(id); s.moveZone(id, step[0], step[1]); }
+        else if (e.key === 'Delete' || e.key === 'Backspace') s.remove([id]);
+        else return;
+        e.preventDefault();
+        e.stopPropagation();
+      },
+      // Keyboard on a focused connection: Enter or Space selects it (the inspector edits its kind and label), Delete removes it.
+      onEdgeKeyDown: (e, id) => {
+        if (readOnly()) return;
+        const s = useEditor.getState();
+        if (e.key === 'Enter' || e.key === ' ') s.select(id);
+        else if (e.key === 'Delete' || e.key === 'Backspace') s.remove([id]);
         else return;
         e.preventDefault();
         e.stopPropagation();

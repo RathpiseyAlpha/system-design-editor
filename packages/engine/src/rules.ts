@@ -137,7 +137,7 @@ type Verdict = { pass: boolean; message: string };
 
 function checkCount(v: View, r: z.infer<typeof count>['count']): Verdict {
   const found = v.of(r.role).filter((n) => !r.in || v.inside(n, r.in));
-  const where = r.in ? ` inside a ${zoneText(r.in)}` : '';
+  const where = r.in ? ` inside any ${zoneText(r.in)}` : '';
   const need = r.min !== undefined && r.max !== undefined ? (r.min === r.max ? `exactly ${r.min}` : `${r.min} to ${r.max}`) : r.min !== undefined ? `at least ${r.min}` : `at most ${r.max}`;
   const pass = (r.min === undefined || found.length >= r.min) && (r.max === undefined || found.length <= r.max);
   return { pass, message: `${found.length} ${rolesText(r.role)}${where} (needs ${need})${found.length ? `: ${names(found)}` : ''}.` };
@@ -178,17 +178,17 @@ function checkPath(v: View, steps: Roles[], kinds?: EdgeKind[]): Verdict {
   }
   if (budget < 0) return { pass: false, message: 'The connections are too tangled to follow this chain: simplify the diagram.' };
   const via = kinds ? ` (${kinds.map((k) => KIND_TEXT[k]).join(' or ')})` : '';
-  if (!best.length) return { pass: false, message: `There is no ${rolesText(steps[0]!)} to start from yet.` };
+  if (!best.length) return { pass: false, message: `There is no ${rolesText(steps[0]!)} block to start from yet.` };
   const last = best[best.length - 1]!;
-  return { pass: false, message: `${best.length > 1 ? `${best.map((n) => `"${n.label}"`).join(' > ')} stops there` : `Nothing goes on from "${last.label}"`}: no connection${via} from it to a ${rolesText(steps[best.length]!)}.` };
+  return { pass: false, message: `${best.length > 1 ? `${best.map((n) => `"${n.label}"`).join(' > ')} stops there` : `Nothing goes on from "${last.label}"`}: no connection${via} from it to any ${rolesText(steps[best.length]!)} block.` };
 }
 
 function checkPlacement(v: View, r: z.infer<typeof placement>['placement']): Verdict {
   const blocks = v.of(r.role);
-  if (!blocks.length) return { pass: false, message: `There is no ${rolesText(r.role)} yet.` };
+  if (!blocks.length) return { pass: false, message: `There is no ${rolesText(r.role)} block yet.` };
   const problems: string[] = [];
   for (const n of blocks) {
-    if (r.in && !v.inside(n, r.in)) problems.push(`"${n.label}" is not inside a ${zoneText(r.in)}`);
+    if (r.in && !v.inside(n, r.in)) problems.push(`"${n.label}" is not inside any ${zoneText(r.in)}`);
     const bad = r.notIn && v.inside(n, r.notIn);
     if (bad) problems.push(`"${n.label}" is in "${bad.label}", a ${zoneText({ kind: bad.kind, ...(bad.kind === 'subnet' ? { access: bad.access ?? 'private' } : {}) })}`);
   }
@@ -201,16 +201,16 @@ function checkSpread(v: View, r: z.infer<typeof spread>['spread']): Verdict {
   const zones = new Map<string, DZone>();
   for (const n of blocks) for (const z of v.around(n)) if (z.kind === r.zoneKind) zones.set(z.id, z);
   const kind = ZONE_KINDS[r.zoneKind].toLowerCase();
-  if (!blocks.length) return { pass: false, message: `There is no ${rolesText(r.roles)} yet.` };
+  if (!blocks.length) return { pass: false, message: `There is no ${rolesText(r.roles)} block yet.` };
   const inZ = [...zones.values()].map((z) => `"${z.label}"`).join(', ');
   return { pass: zones.size >= r.min, message: `${rolesText(r.roles)} ${zones.size === 1 ? 'stands' : 'stand'} in ${zones.size} ${kind}${zones.size === 1 ? '' : 's'}${inZ ? ` (${inZ})` : ''}; needs ${r.min}.` };
 }
 
 function checkNoEdge(v: View, r: z.infer<typeof noEdge>['noEdge']): Verdict {
   const a = new Set(v.of(r.from).map((n) => n.id)), b = new Set(v.of(r.to).map((n) => n.id));
-  if (!a.size || !b.size) return { pass: false, message: `Nothing to check yet: the diagram needs a ${rolesText(!a.size ? r.from : r.to)}.` };
+  if (!a.size || !b.size) return { pass: false, message: `Nothing to check yet: there is no ${rolesText(!a.size ? r.from : r.to)} block.` };
   const bad = v.edges.filter((e) => (a.has(e.from) && b.has(e.to)) || (!r.oneWay && b.has(e.from) && a.has(e.to)));
-  if (!bad.length) return { pass: true, message: `No ${rolesText(r.from)} is connected directly to a ${rolesText(r.to)}.` };
+  if (!bad.length) return { pass: true, message: `No ${rolesText(r.from)} block is connected directly to any ${rolesText(r.to)} block.` };
   const show = bad.slice(0, 3).map((e) => `"${v.node(e.from)!.label}" > "${v.node(e.to)!.label}"`).join(', ');
   return { pass: false, message: `${show}${bad.length > 3 ? ` and ${bad.length - 3} more` : ''} ${bad.length === 1 ? 'connects them' : 'connect them'} directly.` };
 }
@@ -218,7 +218,7 @@ function checkNoEdge(v: View, r: z.infer<typeof noEdge>['noEdge']): Verdict {
 function checkEdgeKind(v: View, r: z.infer<typeof kindRule>['edgeKind']): Verdict {
   const a = new Set(v.of(r.from).map((n) => n.id)), b = new Set(v.of(r.to).map((n) => n.id));
   const between = v.edges.filter((e) => a.has(e.from) && b.has(e.to));
-  if (!between.length) return { pass: false, message: `There is no connection from a ${rolesText(r.from)} to a ${rolesText(r.to)} yet.` };
+  if (!between.length) return { pass: false, message: `There is no connection from any ${rolesText(r.from)} block to any ${rolesText(r.to)} block yet.` };
   const wrong = between.filter((e) => e.kind !== r.kind);
   if (!wrong.length) return { pass: true, message: `${between.length === 1 ? 'The connection is' : `All ${between.length} connections are`} ${KIND_TEXT[r.kind]}.` };
   const e = wrong[0]!;

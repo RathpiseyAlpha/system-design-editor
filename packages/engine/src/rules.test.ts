@@ -42,8 +42,8 @@ describe('the example rules of section 7', () => {
     const r = run(fromTemplate('blank'));
     expect(r.results.every((x) => !x.pass)).toBe(true);
     expect(r.score).toBe(0);
-    expect(r.results[1]!.message).toBe('There is no Relational database yet.');
-    expect(r.results[3]!.message).toBe('Nothing to check yet: the diagram needs a Users.');
+    expect(r.results[1]!.message).toBe('There is no Relational database block yet.');
+    expect(r.results[3]!.message).toBe('Nothing to check yet: there is no Users block.');
   });
 
   it('two failure zones, counted through the zone chain (a zone inside the subnet)', () => {
@@ -68,7 +68,7 @@ describe('the example rules of section 7', () => {
   it('removing the load balancer breaks the path, and the message says where the chain stops', () => {
     const d = fromTemplate('three-tier');
     d.edges = d.edges.filter((e) => e.id !== 'e3' && e.id !== 'e4');
-    expect(run(d).results[0]).toMatchObject({ pass: false, message: '"Customers" > "web-lb" stops there: no connection from it to a Virtual machine, Service, Containers or 1 more.' });
+    expect(run(d).results[0]).toMatchObject({ pass: false, message: '"Customers" > "web-lb" stops there: no connection from it to any Virtual machine, Service, Containers or 1 more block.' });
   });
 
   it('labels, positions and the icon pack do not change any result', () => {
@@ -85,7 +85,7 @@ describe('each rule kind', () => {
   it('count: min, max, exact, and inside a kind of zone', () => {
     expect(passes(d, one({ count: { role: 'vm', min: 2 } })).x).toBe(true);
     expect(passes(d, one({ count: { role: 'vm', max: 1 } })).x).toBe(false);
-    expect(run(d, one({ count: { role: ['vm', 'cache'], min: 3, max: 3, in: { kind: 'subnet', access: 'private' } } })).results[0]).toMatchObject({ pass: true, message: '3 Virtual machine or Cache inside a private subnet (needs exactly 3): "app-1", "app-2", "sessions".' });
+    expect(run(d, one({ count: { role: ['vm', 'cache'], min: 3, max: 3, in: { kind: 'subnet', access: 'private' } } })).results[0]).toMatchObject({ pass: true, message: '3 Virtual machine or Cache inside any private subnet (needs exactly 3): "app-1", "app-2", "sessions".' });
     expect(passes(d, one({ count: { role: 'load-balancer', min: 1, in: { access: 'private' } } })).x).toBe(false);
   });
 
@@ -97,13 +97,13 @@ describe('each rule kind', () => {
 
   it('placement: in a kind of zone, by the zone chain (the network holding the subnet counts)', () => {
     expect(passes(d, one({ placement: { role: 'relational-db', in: { kind: 'network' } } })).x).toBe(true);
-    expect(run(d, one({ placement: { role: 'client', in: { kind: 'network' } } })).results[0]!.message).toBe('"Customers" is not inside a network.');
+    expect(run(d, one({ placement: { role: 'client', in: { kind: 'network' } } })).results[0]!.message).toBe('"Customers" is not inside any network.');
   });
 
   it('edgeKind: at least one connection, and all of them of that kind', () => {
     expect(passes(d, one({ edgeKind: { from: 'relational-db', to: 'object-storage', kind: 'data' } })).x).toBe(true);
     expect(run(d, one({ edgeKind: { from: 'vm', to: 'relational-db', kind: 'async' } })).results[0]).toMatchObject({ pass: false, message: '"app-1" > "orders-db" is a request; it should be an async message (and 1 more).' });
-    expect(run(d, one({ edgeKind: { from: 'vm', to: 'queue', kind: 'async' } })).results[0]!.message).toBe('There is no connection from a Virtual machine to a Queue yet.');
+    expect(run(d, one({ edgeKind: { from: 'vm', to: 'queue', kind: 'async' } })).results[0]!.message).toBe('There is no connection from any Virtual machine block to any Queue block yet.');
   });
 
   it('a path search built to explode stays fast and exact', () => {
@@ -115,7 +115,7 @@ describe('each rule kind', () => {
     const t = performance.now();
     const miss = run(g, one({ path: ['service', 'service', 'service', 'service', 'service', 'service', 'service', 'queue'] })).results[0]!;
     // Answered by remembering dead ends, not by running out of steps.
-    expect(miss).toMatchObject({ pass: false, message: '"s00" > "s10" > "s20" > "s30" > "s40" > "s50" > "s60" stops there: no connection from it to a Queue.' });
+    expect(miss).toMatchObject({ pass: false, message: '"s00" > "s10" > "s20" > "s30" > "s40" > "s50" > "s60" stops there: no connection from it to any Queue block.' });
     expect(passes(g, one({ path: ['service', 'service', 'service', 'service', 'service', 'service', 'service', 'service'] })).x).toBe(true);
     expect(performance.now() - t).toBeLessThan(1000);
   });

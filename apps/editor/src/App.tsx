@@ -6,10 +6,16 @@ import { TopBar } from './ui/TopBar.tsx';
 import { Palette, findService } from './ui/Palette.tsx';
 import { Inspector } from './ui/Inspector.tsx';
 import { PresentBar, startPresenting, stopPresenting, stepBy } from './present/PresentBar.tsx';
+import { PanelBoundary } from './ui/PanelBoundary.tsx';
 
 // The text view loads only when it is opened, so the editor starts without CodeMirror.
-const CodePanel = lazy(() => import('./code/CodePanel.tsx'));
-const NotesPanel = lazy(() => import('./notes/NotesPanel.tsx'));
+// A failed import is not cached by lazy(), so Retry (a new attempt number) makes a new lazy component that loads again.
+const panels = new Map<number, { CodePanel: ReturnType<typeof lazy>; NotesPanel: ReturnType<typeof lazy> }>();
+function panelsFor(attempt: number) {
+  let p = panels.get(attempt);
+  if (!p) panels.set(attempt, (p = { CodePanel: lazy(() => import('./code/CodePanel.tsx')), NotesPanel: lazy(() => import('./notes/NotesPanel.tsx')) }));
+  return p;
+}
 
 function StatusBar() {
   const n = useEditor((s) => s.diagram.nodes.length);
@@ -104,9 +110,16 @@ export function App() {
     </div>
   );
   const code = (
-    <Suspense fallback={<div className="code-panel code-loading">Opening the text view…</div>}>
-      {side === 'notes' ? <NotesPanel /> : <CodePanel />}
-    </Suspense>
+    <PanelBoundary>
+      {(attempt) => {
+        const { CodePanel, NotesPanel } = panelsFor(attempt);
+        return (
+          <Suspense fallback={<div className="code-panel code-loading">Opening the text view…</div>}>
+            {side === 'notes' ? <NotesPanel /> : <CodePanel />}
+          </Suspense>
+        );
+      }}
+    </PanelBoundary>
   );
   if (presenting) {
     return (

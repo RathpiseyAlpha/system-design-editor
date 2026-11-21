@@ -223,6 +223,10 @@ button.pal-item:active { cursor: grabbing; }
 .resize-handle polygon, .resize-handle rect { fill: var(--marker); stroke: var(--edge); stroke-width: 2; }
 .edge .wire-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
 .edge.selected .wire { stroke: var(--marker-strong); stroke-width: 3.5; }
+/* Zone tabs and connections take focus from the keyboard: the ring is drawn on the shape itself, like a block's. */
+.tab-handle:focus, .edge:focus { outline: none; }
+.tab-handle:focus-visible .pill rect.face { stroke: var(--marker-strong); stroke-width: 3.5; }
+.edge:focus-visible .wire { stroke: var(--marker-strong); stroke-width: 4; }
 .port { cursor: crosshair; }
 .port:hover { fill: var(--marker); }
 .rubber { stroke: var(--marker-strong); stroke-width: 3; stroke-dasharray: 6 5; pointer-events: none; }
@@ -251,6 +255,7 @@ button.pal-item:active { cursor: grabbing; }
 .code-panel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; min-width: 0; background: var(--sunken); border-right: var(--bw) solid var(--edge); }
 .body-code .code-panel { border-right: 0; }
 .code-loading { place-items: center; font: var(--t-small); color: var(--muted); }
+.code-loading[role=alert] { align-content: center; gap: 12px; padding: 16px; text-align: center; color: var(--ink); }
 .code-head { display: flex; align-items: center; gap: 8px; padding: 8px var(--s3); border-bottom: var(--bw) solid var(--edge); background: var(--sheet); font: var(--t-small); min-width: 0; }
 .code-head > svg { width: 16px; height: 16px; flex: none; }
 .code-head b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

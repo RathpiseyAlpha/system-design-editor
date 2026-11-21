@@ -236,6 +236,52 @@ try:
         import shutil
         shutil.copy(os.path.join(dl, pngs[0]), SHOT.replace(".png", "-export.png"))
 
+    # 13b. Export SVG in 3D and in the flat view: the flat picture is drawn from above (cards), the 3D one is not.
+    def export_svg():
+        for f in os.listdir(dl):
+            os.remove(os.path.join(dl, f))
+        p.js("const s=document.querySelector('select[aria-label=\"Export a picture\"]');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'svg');s.dispatchEvent(new Event('change',{bubbles:true}));")
+        for _ in range(40):
+            time.sleep(0.25)
+            svgs = [f for f in os.listdir(dl) if f.endswith(".svg")]
+            if svgs:
+                time.sleep(0.2)
+                return open(os.path.join(dl, svgs[0]), encoding="utf-8").read()
+        return ""
+    iso_svg = export_svg()
+    p.js("document.querySelector('button[aria-label=\"Flat view\"]').click();")
+    time.sleep(0.6)
+    flat_svg = export_svg()
+    p.js("document.querySelector('button[aria-label=\"3D view\"]').click();")
+    time.sleep(0.4)
+    cards = flat_svg.count('rx="10"')
+    check("Export SVG in the flat view draws the diagram from above", iso_svg and flat_svg and cards >= 3 and iso_svg.count('rx="10"') == 0, f"{cards} cards in the flat picture")
+
+    # 13c. Zones and connections by keyboard: Tab reaches them; arrows move a zone with its contents, Shift and arrows
+    # resize it, Delete removes a connection. Undo puts everything back.
+    before = json.dumps(saved(p), sort_keys=True)
+    z2 = next(z for z in saved(p)["zones"] if z["id"] == "z2")
+    p.js("document.querySelector('[data-zone-tab=\"z2\"]').focus();")
+    key(p, "ArrowRight", "ArrowRight")
+    time.sleep(0.6)
+    after = saved(p)
+    z2b = next(z for z in after["zones"] if z["id"] == "z2")
+    lb = next(n for n in after["nodes"] if n["id"] == "n2")
+    check("the arrow keys move a focused zone with what is inside it", (z2b["x"] - z2["x"], z2b["y"] - z2["y"]) == (1, 0) and lb["zone"] == "z2", f"{z2['x']} -> {z2b['x']}")
+    p.call("Input.dispatchKeyEvent", type="keyDown", key="ArrowDown", code="ArrowDown", windowsVirtualKeyCode=40, modifiers=8)
+    p.call("Input.dispatchKeyEvent", type="keyUp", key="ArrowDown", code="ArrowDown", windowsVirtualKeyCode=40, modifiers=8)
+    time.sleep(0.6)
+    z2c = next(z for z in saved(p)["zones"] if z["id"] == "z2")
+    check("Shift and an arrow key change a focused zone's size", round(z2c["h"] - z2b["h"], 3) == 1, f"h {z2b['h']} -> {z2c['h']}")
+    p.js("document.querySelector('[data-edge=\"e8\"]').focus();")
+    key(p, "Delete")
+    time.sleep(0.6)
+    check("Delete removes a focused connection", not any(e["id"] == "e8" for e in saved(p)["edges"]))
+    for _ in range(3):
+        key(p, "z", "KeyZ", mods=2)
+    time.sleep(0.6)
+    check("Undo three times puts the zone and the connection back", json.dumps(saved(p), sort_keys=True) == before)
+
     # 14. New from a template.
     p.js("const s=document.querySelector('select[aria-label=\"New diagram\"]');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'microservices');s.dispatchEvent(new Event('change',{bubbles:true}));")
     d = saved(p)
@@ -252,6 +298,14 @@ try:
             break
     code = lambda: p.js("return document.querySelector('.cm-content').innerText;") or ""
     check("Split view shows the diagram as text", "orders-db: relational-db" in code())
+    p.js("document.querySelector('button[aria-label=\"Flat view\"]').click();")
+    time.sleep(0.6)
+    sf = p.js("""const c=document.querySelector('.canvas').getBoundingClientRect();
+      const cards=[...document.querySelectorAll('.blk.flat')].map(b=>b.getBoundingClientRect());
+      return {n: cards.length, inside: cards.every(r=>r.left>=c.left-1&&r.right<=c.right+1&&r.top>=c.top-1&&r.bottom<=c.bottom+1), text: !!document.querySelector('.cm-content')};""")
+    check("the flat view works beside the text in Split", sf["n"] == len(saved(p)["nodes"]) and sf["inside"] and sf["text"], json.dumps(sf))
+    p.js("document.querySelector('button[aria-label=\"3D view\"]').click();")
+    time.sleep(0.4)
 
     def type_at_end(text):
         p.js("document.querySelector('.cm-content').focus();")
