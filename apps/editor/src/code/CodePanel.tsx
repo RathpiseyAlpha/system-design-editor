@@ -74,7 +74,8 @@ export default function CodePanel() {
           diagramText,
           EditorView.lineWrapping, // the panel is narrow: wrap long lines rather than scroll sideways
           linter((v) => { const r = parseText(v.state.doc.toString()); return r.ok ? [] : toDiagnostics(v, r.errors); }, { delay: APPLY_MS }),
-          EditorView.contentAttributes.of({ 'aria-label': 'Diagram as text' }),
+          // tabindex: the editable text is a tab stop, so tools (and screen readers) know the scrolled area has focusable content.
+          EditorView.contentAttributes.of({ 'aria-label': 'Diagram as text', tabindex: '0' }),
           EditorView.updateListener.of((u) => {
             if (!u.docChanged || u.transactions.some((tr) => tr.annotation(fromCanvas))) return;
             pending = true;

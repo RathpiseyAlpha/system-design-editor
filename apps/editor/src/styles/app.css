@@ -183,7 +183,7 @@ svg.iso text { font-family: var(--font-mono); fill: var(--ink); }
 kbd { font: 600 12px/15px var(--font-mono); border: var(--bw-fine) solid var(--edge); border-bottom-width: 3px; border-radius: 6px; padding: 0 4px; background: var(--sheet); color: var(--ink); }
 input.doc-title { border: var(--bw-fine) dashed transparent; border-radius: 6px; background: transparent; color: var(--ink); width: 18ch; min-width: 8ch; flex: 0 1 18ch; }
 input.doc-title:hover { border-color: var(--line); }
-input.doc-title:focus { border-style: solid; border-color: var(--edge); background: var(--sheet); outline: none; }
+input.doc-title:focus { border-style: solid; border-color: var(--edge); background: var(--sheet); }
 .file-select { width: 100px; min-width: 0; flex: none; }   /* fixed: a select is otherwise as wide as its longest option */
 textarea.input { font: 400 14px/21px var(--font-prose); resize: vertical; }
 button.pal-item { width: 100%; background: transparent; color: var(--ink); text-align: left; cursor: grab; font: inherit; }

@@ -80,7 +80,7 @@ export function TopBar() {
         <option value="">New</option>
         {TEMPLATES.map((t) => <option key={t.id} value={t.id}>New: {t.name}</option>)}
       </select>
-      <button className="btn" type="button" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
+      <button className="btn" type="button" aria-label="Open a file" title="Open a diagram file" onClick={() => fileInput.current?.click()}><Icon name="folder" /><span className="lbl">Open</span></button>
       <input
         ref={fileInput}
         type="file"
@@ -92,7 +92,7 @@ export function TopBar() {
           if (f) openText(await f.text(), f.name);
         }}
       />
-      <button className="btn" type="button" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
+      <button className="btn" type="button" aria-label="Save the file" title="Save the diagram as a file" onClick={download}><Icon name="download" /><span className="lbl">Save</span></button>
       <select className="input select file-select" aria-label="Export a picture" value="" onChange={(e) => { const v = e.target.value; if (v === 'png' || v === 'svg') void exportPicture(v); }}>
         <option value="">Export</option>
         <option value="png">Export PNG picture</option>

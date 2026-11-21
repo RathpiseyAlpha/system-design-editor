@@ -16,7 +16,7 @@ h3 { font: var(--t-h3); margin: 0 0 var(--s3); }
 p { margin: 0 0 var(--s3); }
 .muted { color: var(--muted); }
 .mono, code { font-family: var(--font-mono); font-size: .9em; }
-a { color: var(--marker-strong); }
+a { color: var(--marker-text); }
 :focus-visible { outline: 3px solid var(--marker-strong); outline-offset: 2px; }
 .hl { background: linear-gradient(transparent 52%, var(--marker) 52%, var(--marker) 92%, transparent 92%); padding: 0 .08em; }
 
@@ -238,7 +238,7 @@ svg.iso text, svg.solo text, svg.zones-demo text { font-family: var(--font-mono)
 .code pre span.l { display: block; padding: 0 var(--s3) 0 0; white-space: pre; }
 .code pre span.l::before { counter-increment: ln; content: counter(ln); display: inline-block; width: 36px; padding-right: 12px; text-align: right; color: var(--muted); opacity: .7; }
 .code pre span.l.err { background: var(--bad-soft); }
-.k { font-weight: 700; } .r { color: var(--marker-strong); font-weight: 600; } .s { color: var(--warn); } .o { color: var(--port); font-weight: 700; }
+.k { font-weight: 700; } .r { color: var(--marker-text); font-weight: 600; } .s { color: var(--warn); } .o { color: var(--port-text); font-weight: 700; }
 .squiggle { text-decoration: underline wavy var(--bad); text-underline-offset: 4px; }
 .code-msg { margin: 0 var(--s3) var(--s3); padding: 8px 10px; border: var(--bw) solid var(--bad); border-radius: var(--r-control); background: var(--sheet); box-shadow: 2px 2px 0 var(--bad);
   font: var(--t-small); display: grid; grid-template-columns: 18px 1fr; gap: 8px; }

@@ -7,7 +7,7 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 done (2026-11-21); M2 built (2026-11-21), its accessibility pass and speed checks still open.** M2 added: diagram as
+**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3 started.** M2 added: diagram as
 code (Split and Code views, CodeMirror, two-way sync, errors on their line, `packages/engine/src/text.ts`); Auto-layout with ELK
 in a Web Worker (`layout/`); the flat top-down view (`Projection` in `canvas/geometry.ts`); Markdown notes beside the text
 (`notes/`); Present mode (`present/`); the read-only embed `/embed/?mode=view&origin=…` (`embed/`, decision 32). The editor core works: engine package (format, roles, six templates); 3D canvas with
@@ -119,5 +119,9 @@ The code: `packages/engine` (plain TypeScript, Vitest), `apps/editor` (React, Vi
   the flat view, the notes panel and the Present bar.
 - Embed check (a stand-in host page on a second origin, both frames, postMessage both ways):
   `python -I tools/check_embed.py` with the preview on 4319 (it serves `tools/` on port 8765 itself).
+- Quality check (SPEC section 9: first paint, 150 blocks panning, axe-core in both themes, Tab and focus rings, reduced
+  motion, no third-party requests, offline): `python -I tools/check_quality.py` with the preview on 4319. Restart the preview
+  after a build (it lists the files once). A new screen or panel gets an axe pass there. Small coloured text uses the
+  `-text` tokens, never `--marker-strong` or `--port`.
 - Anything a host or a file sends is untrusted: it goes through `readHostMessage` / `parseDiagramText`; notes are drawn from a
   parsed tree, never as HTML; links only for https.

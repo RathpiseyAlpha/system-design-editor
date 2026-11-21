@@ -11,7 +11,7 @@
   --sheet: #FAF6EF;        /* panels, inputs, chips */
   --sunken: #EAE2D5;       /* wells, code panel */
   --ink: #1E1B17;          /* text and outlines */
-  --muted: #6B655B;        /* secondary text (5.1:1 on paper) */
+  --muted: #665F55;        /* secondary text (5.5:1 on paper, 4.9:1 on sunken) */
   --line: #DCD3C5;         /* hairlines inside panels */
   --grid: #E1D7C7;         /* isometric canvas grid */
   --edge: #1E1B17;         /* outline of anything you can touch */
@@ -24,12 +24,14 @@
   --marker-ink: #1E1B17;
   --marker-strong: #3C8A47;/* selection ring, focus ring, links */
   --marker-soft: #E4F1D6;
+  --marker-text: #2B6A35;  /* marker green as small text (5.1:1 on sunken) */
 
   /* Status: always word + icon + colour */
   --ok: #23703F;   --ok-soft: #DCEFD8;
   --warn: #8F4E05; --warn-soft: #F8E2BF;
   --bad: #B3261E;  --bad-soft: #F7D7D2;
   --port: #E0703A;         /* connection ports on blocks */
+  --port-text: #9E4316;    /* port orange as small text (5.0:1 on sunken) */
 
   /* Service categories: the base colour of a block's left face. Top and right faces are mixed from it. */
   --cat-client: #E6DED0;
@@ -60,8 +62,8 @@
   :root:not([data-theme="light"]) {
     --paper: #1B1916; --sheet: #24211D; --sunken: #2D2924; --ink: #F1EAE0; --muted: #ACA396; --line: #3A352E; --grid: #2C2823;
     --edge: #D8CFC1; --drop: #050403; --shade: #000000; --light: #FFFFFF;
-    --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C;
-    --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55;
+    --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C; --marker-text: #97D27E;
+    --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55; --port-text: #F08A55;
     --cat-client: #4A443B; --cat-network: #7A4E2E; --cat-compute: #34507A; --cat-storage: #3F5C2E; --cat-database: #4D4078;
     --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55; --server: #3A5182; --server-ink: #F3EEE6;
     --zone-vpc: #1F2631; --zone-public: #232B1D; --zone-private: #2B2331; --zone-region: #24211C;
@@ -72,8 +74,8 @@
 :root[data-theme="dark"] {
   --paper: #1B1916; --sheet: #24211D; --sunken: #2D2924; --ink: #F1EAE0; --muted: #ACA396; --line: #3A352E; --grid: #2C2823;
   --edge: #D8CFC1; --drop: #050403; --shade: #000000; --light: #FFFFFF;
-  --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C;
-  --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55;
+  --marker: #4E6E35; --marker-ink: #F1EAE0; --marker-strong: #97D27E; --marker-soft: #26331C; --marker-text: #97D27E;
+  --ok: #7CD69A; --ok-soft: #1B3323; --warn: #F2B866; --warn-soft: #3B2B12; --bad: #FF9C93; --bad-soft: #3D1A17; --port: #F08A55; --port-text: #F08A55;
   --cat-client: #4A443B; --cat-network: #7A4E2E; --cat-compute: #34507A; --cat-storage: #3F5C2E; --cat-database: #4D4078;
   --cat-messaging: #713A4A; --cat-observe: #6B5D27; --cat-security: #2E5E55; --server: #3A5182; --server-ink: #F3EEE6;
   --zone-vpc: #1F2631; --zone-public: #232B1D; --zone-private: #2B2331; --zone-region: #24211C;

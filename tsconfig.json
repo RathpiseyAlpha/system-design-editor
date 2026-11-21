@@ -18,5 +18,5 @@
     "skipLibCheck": true,
     "types": ["vite/client"]
   },
-  "include": ["packages/*/src", "apps/*/src", "apps/*/vite.config.ts", "vitest.config.ts"]
+  "include": ["packages/*/src", "apps/*/src", "apps/*/vite.config.ts", "apps/*/offline.ts", "vitest.config.ts"]
 }

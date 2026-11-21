@@ -41,11 +41,11 @@ const diagramLanguage = StreamLanguage.define<State>({
 
 const style = HighlightStyle.define([
   { tag: t.keyword, fontWeight: '700', color: 'var(--ink)' },
-  { tag: t.typeName, color: 'var(--marker-strong)', fontWeight: '600' },
+  { tag: t.typeName, color: 'var(--marker-text)', fontWeight: '600' },
   { tag: t.string, color: 'var(--warn)' },
-  { tag: t.operator, color: 'var(--port)', fontWeight: '700' },
+  { tag: t.operator, color: 'var(--port-text)', fontWeight: '700' },
   { tag: t.comment, color: 'var(--muted)', fontStyle: 'italic' },
-  { tag: t.labelName, color: 'var(--marker-strong)' },
+  { tag: t.labelName, color: 'var(--marker-text)' },
   { tag: t.propertyName, color: 'var(--muted)' },
   { tag: t.invalid, color: 'var(--bad)' },
 ]);
