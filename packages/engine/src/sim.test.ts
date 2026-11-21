@@ -92,6 +92,54 @@ describe('the simulation engine (decision 39)', () => {
     expect(simulate(fromTemplate('three-tier'), scenario([[0, 10]], { events: [{ at: 1, type: 'cut', node: 'n2' }] }, 'n1')).ok).toBe(false);
   });
 
+  it('share: only that part of the requests makes the call, so its failure costs only that part', () => {
+    const d = dia([node('u', 'client'), node('app', 'service'), node('db', 'relational-db'), node('an', 'service')],
+      [edge('e1', 'u', 'app'), edge('e2', 'app', 'db'), edge('e3', 'app', 'an', { sim: { share: 0.1 } })]);
+    const r = run(d, scenario([[0, 100]], { events: [{ at: 5, type: 'fail', node: 'an' }] }));
+    expect([at(r, 0).nodes.an!.arrival, at(r, 0).served, at(r, 5).served]).toEqual([10, 100, 90]);
+  });
+
+  it('load enters only at a client-category block', () => {
+    expect(simulate(fromTemplate('three-tier'), scenario([[0, 10]], {}, 'n3'))).toMatchObject({ ok: false, errors: [expect.stringContaining('"app-1" is a Virtual machine block')] });
+  });
+
+  it('cut and recover a connection: behind a load balancer it is skipped, on a direct call it fails', () => {
+    const d = dia([node('u', 'client'), node('lb', 'load-balancer'), node('a', 'service'), node('b', 'service'), node('db', 'relational-db')],
+      [edge('e1', 'u', 'lb'), edge('e2', 'lb', 'a'), edge('e3', 'lb', 'b'), edge('e4', 'a', 'db'), edge('e5', 'b', 'db')]);
+    const r = run(d, scenario([[0, 400]], { events: [{ at: 5, type: 'cut', edge: 'e3' }, { at: 10, type: 'cut', edge: 'e4' }, { at: 15, type: 'recover', edge: 'e4' }, { at: 15, type: 'recover', edge: 'e3' }] }));
+    expect([at(r, 5).nodes.a!.arrival, at(r, 5).served]).toEqual([400, 400]);
+    expect(at(r, 10).served).toBe(0); // all traffic goes to a, whose call to the database is cut
+    expect([at(r, 15).nodes.b!.arrival, at(r, 15).served]).toEqual([200, 400]);
+  });
+
+  it('slow multiplies latency and capacity; hit-rate changes a cache; backlog slows consumers', () => {
+    const d = dia([node('u', 'client'), node('app', 'service', { sim: { instances: 10 } }), node('c', 'cache'), node('db', 'relational-db', { sim: { capacity: 5000 } })],
+      [edge('e1', 'u', 'app'), edge('e2', 'app', 'c'), edge('e3', 'app', 'db')]);
+    const r = run(d, scenario([[0, 1000]], { events: [{ at: 5, type: 'hit-rate', node: 'c', value: 0.5 }, { at: 10, type: 'slow', role: 'relational-db', latency: 4, capacity: 0.1 }] }));
+    expect([at(r, 6).nodes.db!.arrival, at(r, 6).served]).toEqual([500, 1000]);
+    expect(at(r, 10).nodes.db!.latency).toBeGreaterThan(at(r, 9).nodes.db!.latency * 3.9);
+    expect(at(r, 10).served).toBe(1000 - 500 + 500 * (500 / 500)); // capacity 5,000 x 0.1 = 500: just enough
+    const q = dia([node('u', 'client'), node('api', 'service'), node('q', 'queue'), node('w', 'service', { sim: { instances: 1, capacity: 100 } })],
+      [edge('e1', 'u', 'api'), edge('e2', 'api', 'q', { kind: 'async' }), edge('e3', 'q', 'w', { kind: 'async' })]);
+    const b = run(q, scenario([[0, 80]], { duration: 40, events: [{ at: 0, type: 'backlog', node: 'q', consumers: 0.5 }] }));
+    expect(b.summary.growingQueues).toEqual(['q']); // 80 in, 50 out
+  });
+
+  it('autoscaling removes instances after 60 s under half the threshold, never below min', () => {
+    const d = dia([node('u', 'client'), node('app', 'service', { sim: { instances: 6, autoscale: { min: 2, max: 6, threshold: 0.7, warmup: 0 } } })], [edge('e1', 'u', 'app')]);
+    const r = run(d, scenario([[0, 100]], { duration: 70 }));
+    expect([at(r, 58).nodes.app!.instances, at(r, 60).nodes.app!.instances]).toEqual([6, 2]);
+  });
+
+  it('a CDN answers its hit rate itself; a function follows demand, with a cold start when it grows', () => {
+    const d = dia([node('u', 'client'), node('cdn', 'cdn'), node('fn', 'function'), node('db', 'nosql-db')], [edge('e1', 'u', 'cdn'), edge('e2', 'cdn', 'fn'), edge('e3', 'fn', 'db')]);
+    const r = run(d, scenario([[0, 1000], [10, 2000]]));
+    expect([at(r, 0).nodes.fn!.arrival, at(r, 0).nodes.fn!.instances]).toEqual([400, 40]);
+    expect(at(r, 10).nodes.fn!.instances).toBe(80);
+    expect(at(r, 10).nodes.fn!.latency - at(r, 11).nodes.fn!.latency).toBeCloseTo(300, 0);
+    expect(at(r, 11).served).toBe(2000);
+  });
+
   it('50 blocks over 300 s run in well under a second', () => {
     const nodes = [node('u', 'client'), node('lb', 'load-balancer')], edges = [edge('e0', 'u', 'lb')];
     for (let i = 0; i < 16; i++) {

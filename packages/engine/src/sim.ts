@@ -73,7 +73,13 @@ export function parseScenario(data: unknown, dgm: Diagram): { ok: true; scenario
   if (!r.success) return { ok: false, errors: r.error.issues.slice(0, 20).map((i) => `${i.path.length ? i.path.join('.') + ': ' : ''}${i.message}`) };
   const nodes = new Set(dgm.nodes.map((n) => n.id)), zones = new Set(dgm.zones.map((z) => z.id)), edges = new Set(dgm.edges.map((e) => e.id));
   const errors: string[] = [];
-  r.data.load.forEach((l, i) => { if (!nodes.has(l.from)) errors.push(`load.${i}.from: no block has the id "${l.from}"`); });
+  const byNode = new Map(dgm.nodes.map((n) => [n.id, n]));
+  r.data.load.forEach((l, i) => {
+    const n = byNode.get(l.from);
+    if (!n) errors.push(`load.${i}.from: no block has the id "${l.from}"`);
+    // Load enters where people and outside systems are: a block of the client category (section 13.3).
+    else if (!isSource(n.role)) errors.push(`load.${i}.from: "${n.label}" is a ${roleInfo(n.role).name} block; load enters at a Users, Mobile app, Device or External system block`);
+  });
   r.data.events.forEach((e, i) => {
     if (e.node !== undefined && !nodes.has(e.node)) errors.push(`events.${i}.node: no block has the id "${e.node}"`);
     if (e.zone !== undefined && !zones.has(e.zone)) errors.push(`events.${i}.zone: no zone has the id "${e.zone}"`);
@@ -242,6 +248,7 @@ class Model {
       lat.set(n.id, L);
       const deps = this.out.get(n.id) ?? [];
       const call = (e: DEdge) => (live(e) ? ratio.get(e.to)! * served.get(e.to)! : 0);
+      const part = (e: DEdge, ok: number) => { const sh = e.sim?.share ?? 1; return 1 - sh + sh * ok; };
       const time = (e: DEdge) => (e.sim?.latency ?? 0) + chain.get(e.to)!;
       if (isQueue(n.role)) { served.set(n.id, 1); chain.set(n.id, L); continue; }
       if (n.role === 'load-balancer') {
@@ -256,13 +263,14 @@ class Model {
         if (ca && ca.dbs.includes(e)) continue;
         if (ca && e === ca.cache) {
           // A cache that rejects is a miss, not an error: hit + miss × the databases.
-          const dbs = ca.dbs.reduce((x, db) => x * call(db), 1);
+          const dbs = ca.dbs.reduce((x, db) => x * part(db, call(db)), 1);
           sv *= ca.h + (1 - ca.h) * dbs;
-          tm += time(e) + (1 - ca.h) * ca.dbs.reduce((x, db) => x + time(db), 0);
+          tm += time(e) + (1 - ca.h) * ca.dbs.reduce((x, db) => x + (db.sim?.share ?? 1) * time(db), 0);
           continue;
         }
-        sv *= call(e);
-        tm += this.node.get(e.to) && isQueue(this.node.get(e.to)!.role) ? (e.sim?.latency ?? 0) + lat.get(e.to)! : time(e);
+        // Only `share` of the requests make this call: the others do not depend on it (and do not wait for it).
+        sv *= part(e, call(e));
+        tm += (e.sim?.share ?? 1) * (isQueue(this.node.get(e.to)!.role) ? (e.sim?.latency ?? 0) + lat.get(e.to)! : time(e));
       }
       if (n.role === 'cdn') { sv = s.hitRate + (1 - s.hitRate) * sv; tm = L + (1 - s.hitRate) * (tm - L); }
       if (isSource(n.role) && !deps.length) sv = 0;
