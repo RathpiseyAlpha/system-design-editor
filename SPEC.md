@@ -474,6 +474,9 @@ this trims a few pixels of each icon's background square. Reverse it by drawing 
 
 ### Still open (for the instructor)
 
+- **Home page and sign-in page** (design page Screens F and G, proposed 2026-11-21): a home page at the address's root with
+  the editor moved to `/app/` and sign-in at `/signin/` (one page for signing in and signing up, since there are no
+  passwords). Built only after approval.
 - **Licence of this repository** (for example MIT for the code). Logos and AWS icons keep their own terms either way.
 - **Trademark check on the name** before any public launch.
 

@@ -96,6 +96,8 @@
   --t-h3: 700 16px/22px var(--font-mono);
   --t-h2: 700 22px/28px var(--font-mono);
   --t-h1: 800 32px/38px var(--font-mono);
+  --t-display: 800 50px/56px var(--font-mono);   /* the home page's one headline (32px/38px under 720px wide) */
+  --t-lede: 400 18px/29px var(--font-prose);     /* the paragraph under it */
   --t-block: 700 14px/17px var(--font-mono);     /* name on a block */
   --t-block-sub: 500 12px/15px var(--font-mono); /* product on a block */
   --t-code: 400 13px/22px var(--font-mono);

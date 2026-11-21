@@ -374,6 +374,106 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
 .cap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cap-grid .input::placeholder { color: var(--muted); opacity: .8; }
 @media (max-width: 640px) { .specimen div { grid-template-columns: 1fr; gap: 2px; } }
+
+/* ---------- Screen F: home page, Screen G: sign in (proposed) ---------- */
+.vp-auto { container: app / inline-size; }   /* pages that scroll: the frame is as tall as the page */
+.home, .auth { background: var(--paper); color: var(--ink); min-height: 100%; }
+.home a, .auth a { color: inherit; }
+.home-top { display: flex; align-items: center; gap: var(--s4); height: 64px; padding: 0 var(--s6); border-bottom: var(--bw) solid var(--edge); background: var(--sheet); }
+.home-top .brand { text-decoration: none; font-size: 16px; }
+.home-nav { display: flex; gap: var(--s5); font: var(--t-ui); }
+.home-nav a { text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+.home-nav a:hover { border-bottom-color: var(--edge); }
+.home .btn, .auth .btn { text-decoration: none; }
+.btn--lg { min-height: 46px; padding: 10px 20px; font-size: 14px; }
+.hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--s6); align-items: center; padding: var(--s7) var(--s6) var(--s6);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 40px 40px; background-position: -1px -1px;
+  border-bottom: var(--bw) solid var(--edge); }
+.hero-copy { display: grid; gap: var(--s5); justify-items: start; }
+.display { font: var(--t-display); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.lede { font: var(--t-lede); margin: 0; max-width: 46ch; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.fine { font: var(--t-hint); color: var(--muted); margin: 0; }
+.hero-stage { margin: 0; display: grid; gap: var(--s3); }
+.hero-stage .seg { justify-self: end; }
+.hero-canvas { height: 420px; border: var(--bw) solid var(--edge); border-radius: var(--r-panel); background: var(--paper); box-shadow: var(--pop-lg); }
+.hero-stage figcaption { font: var(--t-hint); color: var(--muted); justify-self: end; }
+.home-rows { display: grid; padding: 0 var(--s6); }
+.home-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--s6); align-items: center; padding: var(--s6) 0; border-bottom: var(--bw-fine) solid var(--line); }
+.home-row:last-child { border-bottom: 0; }
+.home-row h2, .home-templates h2, .home-teach h2 { font: var(--t-h2); margin: 0 0 var(--s3); }
+.home-row p, .home-teach p { font: var(--t-body); margin: 0; max-width: 52ch; }
+.home-row code { font: 600 14px/22px var(--font-mono); background: var(--sunken); padding: 1px 5px; border-radius: 4px; }
+.row-code { margin: 0; padding: var(--s4) var(--s5); background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-panel); box-shadow: var(--pop);
+  font: var(--t-code); white-space: pre; overflow: hidden; }
+.row-code .k { color: var(--marker-text); font-weight: 700; } .row-code .c { color: var(--muted); }
+.pack-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }
+.pack-trio > div { display: grid; justify-items: center; gap: var(--s2); padding: var(--s4) var(--s3); background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: var(--r-panel); text-align: center; }
+.pack-trio small { font: var(--t-hint); color: var(--muted); } .pack-trio b { font: 700 13px/18px var(--font-mono); }
+.row-sim { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--s4); align-items: center; }
+.row-sim svg.solo { width: 200px; height: 200px; overflow: visible; }
+.home-templates { padding: var(--s6); border-top: var(--bw) solid var(--edge); background: var(--sheet); }
+.home-templates .head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4); margin-bottom: var(--s4); }
+.home-templates .head p { margin: 0; font: var(--t-small); color: var(--muted); }
+.tpl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }
+.tpl { display: grid; gap: 4px; justify-items: start; align-content: start; text-align: left; padding: var(--s3) var(--s4); background: var(--paper); border: var(--bw) solid var(--edge); border-radius: var(--r-control);
+  box-shadow: var(--pop-sm); cursor: pointer; color: var(--ink); font: inherit; }
+.tpl:hover { transform: var(--lift); box-shadow: var(--pop); }
+.tpl b { font: 700 14px/20px var(--font-mono); } .tpl span { font: 400 13px/19px var(--font-prose); color: var(--muted); }
+.home-teach { display: flex; align-items: center; justify-content: space-between; gap: var(--s5); padding: var(--s6); border-top: var(--bw) solid var(--edge); background: var(--sunken); }
+.home-foot { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); padding: var(--s4) var(--s6); border-top: var(--bw) solid var(--edge); font: var(--t-hint); color: var(--muted); }
+.home-foot a { color: var(--ink); }
+@container app (max-width: 720px) {
+  .home-top { padding: 0 var(--s4); gap: var(--s3); }
+  .home-nav, .home-top .btn--ghost { display: none; }
+  .hero, .home-row { grid-template-columns: minmax(0, 1fr); }
+  .hero { padding: var(--s6) var(--s4); gap: var(--s5); }
+  .display { font-size: 32px; line-height: 38px; }
+  .lede { font-size: 16px; line-height: 26px; }
+  .hero-canvas { height: 300px; }
+  .hero-stage .seg, .hero-stage figcaption { justify-self: start; }
+  .home-rows, .home-templates, .home-teach, .home-foot { padding-left: var(--s4); padding-right: var(--s4); }
+  .home-templates .head { display: block; }
+  .tpl-grid { grid-template-columns: minmax(0, 1fr); }
+  .row-sim { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .home-teach { flex-direction: column; align-items: flex-start; }
+  .row-code { font-size: 12px; }
+  .pack-trio { gap: var(--s2); } .pack-trio > div { padding: var(--s3) var(--s1); }
+}
+
+.auth { display: grid; grid-template-rows: 64px minmax(0, 1fr); height: 100%; }
+.auth-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 40px 40px; }
+.auth-card-wrap { display: grid; place-items: center; padding: var(--s5); }
+.auth-card { width: 100%; max-width: 440px; display: grid; gap: var(--s4); padding: var(--s6); background: var(--sheet); border: var(--bw) solid var(--edge);
+  border-radius: var(--r-panel); box-shadow: var(--pop-lg); }
+.auth-card h1 { font: var(--t-h1); margin: 0; }
+.auth-card .sub { font: 400 15px/24px var(--font-prose); margin: 0; }
+.providers { display: grid; gap: var(--s3); }
+.btn--provider { justify-content: center; min-height: 46px; font-size: 14px; font-weight: 700; }
+.btn--provider svg { width: 18px; height: 18px; fill: currentColor; }
+.carry { display: grid; grid-template-columns: 18px 1fr; gap: var(--s2); margin: 0; font: 400 13px/19px var(--font-prose); padding: 10px 12px; border-radius: var(--r-control);
+  background: var(--marker-soft); border: var(--bw-fine) solid var(--marker-strong); }
+.carry svg { width: 16px; height: 16px; margin-top: 2px; color: var(--marker-text); }
+.keep { border-top: var(--bw-fine) solid var(--line); padding-top: var(--s4); display: grid; gap: 4px; }
+.keep h2 { font: var(--t-h3); margin: 0; } .keep p { margin: 0; font: 400 13px/20px var(--font-prose); color: var(--ink); }
+.auth-alt { margin: 0; font: 400 13px/20px var(--font-prose); color: var(--muted); }
+.auth-alt a { color: var(--ink); font-weight: 600; }
+.auth-error { display: grid; grid-template-columns: 18px 1fr; gap: var(--s2); padding: 10px 12px; border: var(--bw) solid var(--bad); border-radius: var(--r-control);
+  box-shadow: 2px 2px 0 var(--bad); background: var(--sheet); font: 400 13px/19px var(--font-prose); }
+.auth-error svg { width: 16px; height: 16px; color: var(--bad); margin-top: 2px; } .auth-error b { font: 700 13px/19px var(--font-mono); display: block; }
+.auth-art { border-left: var(--bw) solid var(--edge); background: color-mix(in srgb, var(--paper) 70%, transparent); display: grid; grid-template-rows: auto minmax(0, 1fr); padding: var(--s6); gap: var(--s3); }
+.auth-art p { margin: 0; font: var(--t-h2); max-width: 18ch; }
+.auth-art .canvas { background: transparent; }
+@container app (max-width: 720px) {
+  .auth-main { grid-template-columns: minmax(0, 1fr); }
+  .auth-art { display: none; }
+  .auth-card { padding: var(--s5); box-shadow: var(--pop); }
+  .auth-card-wrap { align-items: start; padding: var(--s4); }
+  .home-top .btn--ghost .lbl { display: none; }
+}
+.frames { display: flex; flex-wrap: wrap; gap: var(--s5); align-items: flex-start; }
+.frames .vp-wrap { flex: none; }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -835,6 +935,51 @@ svg.zones-demo { width: 100%; height: 260px; overflow: visible; display: block; 
           <p>The spike to 2,000 requests per second is served in both zones. Busiest block: app-1 at 83%.</p>
           <span class="hint">Next: try "Zone goes down" to find what breaks.</span></div>
         <p class="note" style="margin:0">The verdict is a plain sentence first, numbers second. "Breaks" names the bottleneck or single point of failure and gives one hint.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="board">
+    <div class="board-head">
+      <h2 style="margin:0">Screen F: home page (proposed)</h2>
+      <p class="muted">What a visitor sees at the address's root. One idea up front: the editor's own drawing, live, in the pack you pick, with traffic moving through it. Start drawing needs no account; Sign in comes second. The editor moves to <code>/app/</code>, the sign-in page is <code>/signin/</code>, the embed stays at <code>/embed/</code>. Shown at 1280 wide and on a phone (390 wide). Without the cloud service (GitHub Pages), Sign in is not shown.</p>
+    </div>
+    <div class="sizes"><div class="seg" role="group" aria-label="Home page for" id="homeWho"><button type="button" data-who="out" aria-pressed="true">A visitor</button><button type="button" data-who="in" aria-pressed="false">Someone signed in</button></div></div>
+    <div class="vp-wrap"><div class="viewport vp-auto" id="vpF" data-w="1280"></div></div>
+    <div class="frames">
+      <div class="vp-wrap" style="width:390px"><div class="viewport vp-auto" id="vpF2" data-w="390"></div></div>
+      <div class="side-notes">
+        <h3>Home page notes</h3>
+        <ul>
+          <li>The hero's switch really switches the pack: the same file in Generic, AWS and Open source, so the vendor-neutral idea is shown, not told.</li>
+          <li>Dots move once the page has loaded and stand still under reduced motion, as in the simulator.</li>
+          <li>Templates open the editor with that template (<code>/app/?template=three-tier</code>); signed in, it becomes a new online diagram.</li>
+          <li>Signed in, the top bar says My diagrams instead of Sign in, and Start drawing becomes Open the editor (the person's last diagram).</li>
+          <li>One primary button per view: Start drawing in the hero (the top bar's copy is plain). The features are not numbered: they are not a sequence. No stock pictures.</li>
+          <li>Plain static HTML built with the editor (no framework on this page), so it is the fastest page of the site.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="board">
+    <div class="board-head">
+      <h2 style="margin:0">Screen G: sign in (proposed)</h2>
+      <p class="muted">Signing in and signing up are one page: there are no passwords, so the first sign-in with GitHub or Google creates the account and there is no form. The page says what comes along (the diagram on screen) and what is kept about the person, before anyone leaves for GitHub. Shown at 1280 × 720, and on a phone after a sign-in that did not finish.</p>
+    </div>
+    <div class="vp-wrap"><div class="viewport" id="vpG" data-w="1280" data-h="720"></div></div>
+    <div class="frames">
+      <div class="vp-wrap" style="width:390px"><div class="viewport" id="vpG2" data-w="390" data-h="844"></div></div>
+      <div class="side-notes">
+        <h3>Sign-in notes</h3>
+        <ul>
+          <li>Only the providers the server has turned on are shown.</li>
+          <li>Provider marks are the providers' own (GitHub's mark and Google's G, from simple-icons 16.38.0, CC0 files), in ink like every other icon here.</li>
+          <li>A sign-in that did not finish (Cancel at GitHub, an expired try) comes back to this page with the message and the buttons, not to the editor.</li>
+          <li>Keep working without an account goes back to the editor; nothing is lost either way.</li>
+          <li>Already signed in, <code>/signin/</code> goes straight to the editor.</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -1391,9 +1536,150 @@ function renderE() {
     <p class="indicative">Teaching model: indicative numbers, not a real cloud.</p>`;
 }
 
+
+// ---------------- Screen F (home page) and Screen G (sign in), proposed. Each page is written once and shown in two frames.
+const MARK_GH = 'M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12', MARK_GO = 'M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z';
+const TEMPLATES_HOME = [
+  ['Blank', 'An empty canvas.'],
+  ['Static website', 'Visitors, DNS, a CDN and the site files in object storage.'],
+  ['3-tier web app', 'Users, a load balancer, two app servers, a database and a cache in one network.'],
+  ['Microservices', 'An API gateway in front of three services, each with its own database, and an event queue.'],
+  ['Serverless API', 'Sign-in, an API gateway, functions, a NoSQL table and object storage.'],
+  ['Event pipeline', 'Devices stream events to processing, a warehouse and an archive.'],
+];
+// The hero uses Screen E's shop at a calm moment (no spike, nothing down): compact enough to read at hero size.
+const HERO_RATES = { e1: 1200, e2: 600, e3: 600, e4: 450, e5: 150, e6: 600 };
+let heroPack = 'aws', homeWho = 'out';
+const markSVG = (vp) => vp.querySelectorAll('.brand-mark').forEach((el) => { el.setAttribute('viewBox', '-62 -66 124 112'); el.innerHTML = blockSVG({ role: 'vm', x: 0, y: 0, label: '' }, { mini: true }); });
+function homeHTML(who) {
+  const inn = who === 'in';
+  return `<div class="home">
+    <header class="home-top">
+      <a class="brand" href="#"><svg class="brand-mark" aria-hidden="true"></svg>Archboard</a>
+      <nav class="home-nav" aria-label="Home page"><a href="#">Templates</a><a href="#">Teaching</a><a href="#">Source code</a></nav>
+      <span class="spacer"></span>
+      ${inn ? `<a class="btn btn--ghost" href="#"><svg><use href="#i-folder"/></svg>My diagrams</a>` : `<a class="btn btn--ghost" href="#">Sign in</a>`}
+      <a class="btn" href="#">${inn ? 'Open the editor' : 'Start drawing'}</a>
+    </header>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1 class="display">Draw the system. Then find where it breaks.</h1>
+        <p class="lede">A free editor for software architecture. Put blocks on a 3D grid or type them as text, name them in AWS or open-source terms, then run a traffic spike or a failed zone and see what gives first.</p>
+        <div class="hero-cta">${inn
+          ? `<a class="btn btn--primary btn--lg" href="#">Open the editor</a><a class="btn btn--lg" href="#"><svg><use href="#i-folder"/></svg>My diagrams</a>`
+          : `<a class="btn btn--primary btn--lg" href="#">Start drawing</a><a class="btn btn--lg" href="#">Sign in to save online</a>`}</div>
+        <p class="fine">${inn ? 'Signed in as Dara. Every change is saved to your account.' : 'No account needed. Your diagram stays in this browser until you sign in.'}</p>
+      </div>
+      <figure class="hero-stage">
+        <div class="seg" role="group" aria-label="Show the diagram as">${[['generic', 'Generic'], ['aws', 'AWS'], ['oss', 'Open source']].map(([p, l]) => `<button type="button" data-hero-pack="${p}" aria-pressed="${p === heroPack}">${l}</button>`).join('')}</div>
+        <div class="canvas hero-canvas"></div>
+        <figcaption>One file, three icon packs. The blocks never move.</figcaption>
+      </figure>
+    </section>
+    <section class="home-rows">
+      <article class="home-row">
+        <div><h2>Type it or draw it</h2><p>Write <code>web-lb &gt; app-1</code> and the connection appears on the canvas. Drag a block and the text follows. The text is the diagram, so it fits in a pull request.</p></div>
+        <pre class="row-code"><span class="c">// online shop</span>
+<span class="k">users</span> Customers
+<span class="k">load-balancer</span> web-lb
+<span class="k">vm</span> app-1, app-2
+<span class="k">relational-db</span> orders-db
+
+Customers &gt; web-lb "HTTPS"
+web-lb &gt; app-1, app-2
+app-1 &gt; orders-db "SQL"</pre>
+      </article>
+      <article class="home-row">
+        <div><h2>Your stack's names, one file</h2><p>The file says what each block does, not which product it is. Show it as AWS for one class and as open source for the next; nothing moves and nothing is lost.</p></div>
+        <div class="pack-trio" data-trio></div>
+      </article>
+      <article class="home-row">
+        <div><h2>Break it on purpose</h2><p>Run a spike, a failed zone, a slow database or a cut link. Blocks fill with their load, and the verdict names the bottleneck and the single point of failure. A teaching model with indicative numbers, not a real cloud.</p></div>
+        <div class="row-sim"><svg class="solo" aria-hidden="true" data-overload></svg>
+          <div class="verdict"><span class="row" style="gap:8px"><span class="chip chip--bad"><svg><use href="#i-x"/></svg>Breaks</span><b class="mono">at 2:00</b></span>
+            <p><b>Bottleneck:</b> app-1 at 167% once zone-b went down.</p><span class="hint">Hint: run the app tier in both zones.</span></div></div>
+      </article>
+    </section>
+    <section class="home-templates" aria-labelledby="tplHead">
+      <div class="head"><h2 id="tplHead">Start from a template</h2><p>Opens in the editor. Change anything.</p></div>
+      <div class="tpl-grid">${TEMPLATES_HOME.map(([n, d]) => `<button class="tpl" type="button"><b>${n}</b><span>${d}</span></button>`).join('')}</div>
+    </section>
+    <section class="home-teach">
+      <div><h2>Teaching with it?</h2><p>Put the editor in your own course site. Learning mode checks a student's diagram against your rules while they work, and the checker scores the hand-in on your server with the same engine the student saw.</p></div>
+      <a class="btn" href="#">Read the embed guide</a>
+    </section>
+    <footer class="home-foot"><span>Archboard (working name)</span><a href="#">Source on GitHub</a><span>Diagrams stay in your browser unless you sign in.</span></footer>
+  </div>`;
+}
+function authHTML(error) {
+  return `<div class="auth">
+    <header class="home-top"><a class="brand" href="#"><svg class="brand-mark" aria-hidden="true"></svg>Archboard</a><span class="spacer"></span><a class="btn btn--ghost" href="#"><svg><use href="#i-back"/></svg><span class="lbl">Back to the editor</span></a></header>
+    <main class="auth-main">
+      <div class="auth-card-wrap"><div class="auth-card">
+        <h1>Sign in</h1>
+        <p class="sub">New here? Your first sign-in creates your account. There is no form and no password.</p>
+        ${error ? `<div class="auth-error" role="alert"><svg><use href="#i-alert"/></svg><span><b>Signing in did not finish.</b>GitHub did not send you back, or Cancel was pressed. Try again; your diagram is still in this browser.</span></div>` : ''}
+        <div class="providers">
+          <a class="btn btn--provider" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MARK_GH}"/></svg>Continue with GitHub</a>
+          <a class="btn btn--provider" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MARK_GO}"/></svg>Continue with Google</a>
+        </div>
+        <p class="carry"><svg><use href="#i-check"/></svg><span>The diagram you were working on comes with you: it becomes your first online diagram.</span></p>
+        <div class="keep"><h2>What we keep</h2><p>Your GitHub or Google account number and your name. No email address, no password. Delete your account and every diagram in it from the account menu, any time.</p></div>
+        <p class="auth-alt">Rather not? <a href="#">Keep working without an account</a>. Your work stays in this browser.</p>
+      </div></div>
+      <div class="auth-art"><p>Your diagrams, on any computer.</p><div class="canvas" data-auth-art></div></div>
+    </main>
+  </div>`;
+}
+const AUTH_ART = { title: 'Your diagrams', zones: [],
+  nodes: [
+    { id: 'a1', role: 'client', label: 'Your laptop', x: 0, y: 0 },
+    { id: 'a3', role: 'relational-db', label: 'My diagrams', x: 5.5, y: 0 },
+    { id: 'a2', role: 'client', label: 'Lab computer', x: 11, y: 0 },
+  ],
+  edges: [{ id: 'f1', from: 'a1', to: 'a3', kind: 'request', label: 'saved' }, { id: 'f2', from: 'a3', to: 'a2', kind: 'request', label: 'opened' }] };
+function renderHome(vp, who) {
+  vp.innerHTML = homeHTML(who);
+  markSVG(vp);
+  vp.querySelector('[data-trio]').innerHTML = [['generic', 'Generic'], ['aws', 'AWS'], ['oss', 'Open source']].map(([p, l]) => {
+    const v = show('relational-db', p, 'postgresql'); return `<div>${icoHTML(v, true)}<b>${esc(v.name)}</b><small>${l}</small></div>`; }).join('');
+  const ov = vp.querySelector('[data-overload]'); ov.setAttribute('viewBox', '-100 -150 200 230'); ov.innerHTML = blockSVG({ role: 'vm', label: 'app-1', x: 0, y: 0 }, { pack: 'aws', util: 1.67 });
+  vp.querySelectorAll('[data-hero-pack]').forEach((b) => b.addEventListener('click', () => { heroPack = b.dataset.heroPack; renderHomes(); }));
+}
+// A page that scrolls: its frame is as tall as the page at that width.
+function fitAuto(vp) {
+  const W = +vp.dataset.w;
+  vp.style.width = W + 'px'; vp.style.height = 'auto';
+  const H = vp.scrollHeight; vp.style.height = H + 'px';
+  const s = Math.min(1, (vp.parentElement.clientWidth - 8) / W);
+  vp.style.transform = `scale(${s})`;
+  vp.parentElement.style.height = Math.ceil(H * s) + 8 + 'px';
+}
+function renderHomes() {
+  for (const id of ['vpF', 'vpF2']) { const vp = document.getElementById(id); renderHome(vp, homeWho); fitAuto(vp); }
+  requestAnimationFrame(() => {
+    for (const id of ['vpF', 'vpF2']) {
+      const vp = document.getElementById(id), c = vp.querySelector('.hero-canvas');
+      drawCanvas(c, SIM_DIAGRAM, { pack: heroPack, tabAt: 'corners', pad: [20, 20, 20, 20], sim: { util: {}, off: [], zoneOff: [], cut: [], rates: HERO_RATES } });
+      fitAuto(vp);
+    }
+  });
+  document.querySelectorAll('#homeWho button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.who === homeWho)));
+}
+document.querySelectorAll('#homeWho button').forEach((b) => b.addEventListener('click', () => { homeWho = b.dataset.who; renderHomes(); }));
+function renderAuths() {
+  const g = document.getElementById('vpG'), g2 = document.getElementById('vpG2');
+  g.innerHTML = authHTML(false); g2.innerHTML = authHTML(true);
+  markSVG(g); markSVG(g2);
+  fit(g); fit(g2);
+  requestAnimationFrame(() => drawCanvas(g.querySelector('[data-auth-art]'), AUTH_ART, { pack: 'generic', noGrid: true, pad: [24, 24, 24, 24] }));
+}
+
 function renderAll() {
   renderA();
   renderE();
+  renderHomes();
+  renderAuths();
   ['vpB', 'vpC', 'vpE'].forEach((id) => fit(document.getElementById(id)));
   requestAnimationFrame(() => {
     drawCanvas(document.getElementById('canvasE'), SIM_DIAGRAM, { pack: 'aws', sim: SIM, tabAt: 'corners', pad: [128, 24, 70, 24] });
