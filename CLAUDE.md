@@ -7,7 +7,7 @@ editor knows nothing about courses. Owner: Heng Rathpisey. Repository: https://g
 
 ## Status
 
-**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3 started.** M2 added: diagram as
+**M1 done (2026-11-21); M2 done (2026-11-21; section 9 checked by `tools/check_quality.py`, decisions 33-34); M3 started: the rule engine is built, `packages/engine/src/rules.ts`, SPEC section 7 and decision 35; next the checker service `apps/checker`, the embed's edit and learn modes, the learning panel.** M2 added: diagram as
 code (Split and Code views, CodeMirror, two-way sync, errors on their line, `packages/engine/src/text.ts`); Auto-layout with ELK
 in a Web Worker (`layout/`); the flat top-down view (`Projection` in `canvas/geometry.ts`); Markdown notes beside the text
 (`notes/`); Present mode (`present/`); the read-only embed `/embed/?mode=view&origin=…` (`embed/`, decision 32). The editor core works: engine package (format, roles, six templates); 3D canvas with

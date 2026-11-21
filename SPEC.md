@@ -2,7 +2,8 @@
 
 Status: **M1 done** (2026-11-21); **M2 done** (2026-11-21): diagram as code, auto-layout, flat view, notes, Present mode
 and the read-only embed, and section 9 passes in `tools/check_quality.py` (speed, WCAG 2.2 AA by axe-core in both themes,
-keyboard, reduced motion, offline). Not covered by any check: a screen reader, Firefox and Safari, touch. **M3 started.** "Archboard" is a working name.
+keyboard, reduced motion, offline). Not covered by any check: a screen reader, Firefox and Safari, touch. **M3 started**: the
+rule engine (section 7) is built and tested; the checker service, the embed's edit and learning modes and the learning panel are next. "Archboard" is a working name.
 
 ## 1. What it is
 
@@ -184,7 +185,7 @@ Logos and product names are trademarks of their owners and are used only to name
   labels ≤ 60 characters, notes ≤ 500, file ≤ 256 KB. Unknown fields are dropped; an unknown role or a dangling edge makes
   the file invalid with a message that names it. Later versions only add fields; v1 files must always open.
 
-## 7. Rule engine (learning mode, v2, sketch)
+## 7. Rule engine (learning mode, v2; built in M3, `packages/engine/src/rules.ts`)
 
 A challenge is a scenario plus rules over roles, zones and edges, never over positions, labels or packs:
 
@@ -201,6 +202,25 @@ A challenge is a scenario plus rules over roles, zones and edges, never over pos
 
 Rule kinds: `count`, `path`, `placement`, `spread`, `noEdge`, `edgeKind`. One TypeScript implementation runs in the browser (live hints)
 and in the checker service (the judge), so the two can never disagree (section 12, decision 9).
+
+A ruleset file is `{"format": "archboard-rules", "version": 1, "title"?, "rules": [{id, points, text, hint?, rule}]}` (at most
+100 rules, 0 to 100 points each, ids unique). Wherever a rule names a role it takes one role id or a list (at most 20); a zone
+is matched by `{kind?, access?}` (access only for subnets). What each kind means (decision 35):
+
+| Rule | Shape | Passes when |
+|---|---|---|
+| `count` | `{role, min?, max?, in?}` | the number of blocks of the role (inside a matching zone, if `in`) is within min and max |
+| `path` | `{path: [roles, ...], kinds?}` | a chain of blocks of those roles exists, each step one direct connection **in its direction**, no block twice; `kinds` limits the connection kinds. It does not forbid a shortcut: pair it with `noEdge`. |
+| `placement` | `{role, in?, notIn?}` | at least one block of the role exists, every one is inside a zone matching `in` and none inside one matching `notIn` |
+| `spread` | `{roles, zoneKind, min}` | the blocks of those roles stand in at least `min` different zones of that kind |
+| `noEdge` | `{from, to, oneWay?}` | blocks of both roles exist and none is directly connected to the other, **in either direction** unless `oneWay` |
+| `edgeKind` | `{from, to, kind}` | at least one connection from the first role to the second exists, and every one is of that kind |
+
+"Inside" follows the file's zone and parent chain, and any enclosing zone counts (a database in a subnet is in the network that
+holds the subnet). A rule that only forbids something fails while there is nothing to check, so **a blank diagram scores 0**.
+Messages say what was found, naming blocks by label in id order; the path search remembers dead ends and stops after a fixed
+number of steps, so a diagram built to make it explode is answered fast and the same in the browser and the checker.
+`checkDiagram(diagram, ruleset)` is the checker's whole job for untrusted input and answers in the shape of section 8.2.
 Behaviour checks that need the simulator are part of labs (section 14).
 
 ## 8. Integration: embed API and checker API
@@ -380,6 +400,7 @@ Each can be reversed; the reason is given so a later change knows what it trades
 | 32 | **The embed's first version is view-only** (`/embed/?mode=view&origin=…`). It listens only to its parent window at the declared origin and posts only there, never reads or writes the editor's autosave, does not save the host's theme, and answers `loaded` and `error` (added to section 8.1). Edit and learning modes come with M3. Hosting it (for example on GitHub Pages) is left to the instructor. | Hosts can show diagrams now; nothing a host sends can change the user's own work. |
 | 33 | **Offline by a service worker** written at build time (`apps/editor/offline.ts`): it keeps a copy of every file of the build, pages network first, hashed files from the copy, one cache per build. Section 9's "works offline once loaded" is checked by going offline after load (text view, notes, auto-layout) and reopening the page offline. | Before it, a dropped network made the text view and notes fail to load and took the whole editor down; preloading parts would not cover icons, the layout worker or a reload. |
 | 34 | **How section 9 is measured** (`tools/check_quality.py`): "classroom laptop" is Chrome with the CPU slowed 4x and a 20 Mbit/s, 20 ms network, cache empty (median of 3 loads); "smooth" for 150 blocks is real drags and wheel turns with the CPU slowed 2x, median frame at most 20 ms and 95 % at most 34 ms, with no more frames counted than 60 a second (one timer only); contrast and names by axe-core 4.10.3 (WCAG 2.2 AA tags) on every screen in both themes, plus two passes of our own where axe cannot decide: every text and tspan on the canvas (blocks, zone tabs, connection labels; 3D, flat and the AWS pack) against the shapes under it, and page text axe leaves undecided against its composited background (a block's product name is 88 % ink on its face colour for this); every visible control reached with Tab (members of a toolbar or group through its tab stop) and a ring on every stop. Small text in a colour (code highlighting) uses the `-text` tokens (`--marker-text`, `--port-text`), which reach 4.5:1 on every surface. | A target that is not measured is not met; these numbers are written down so a later change can be held to them. |
+| 35 | **What each rule means** is fixed in section 7: zone chain not geometry, forbidding rules fail on an empty diagram, `path` directed and simple, `noEdge` both ways by default, `edgeKind` needs at least one connection. `points` in a result is what the rule is worth; `score` adds up the rules that pass. | A student's mark must not depend on where blocks stand, which pack is shown or what they are called, and handing in nothing must not earn points. |
 
 Also decided by the instructor (2026-11-20): **AWS icons get rounded corners** to match the stickers (they fill the sticker and
 are clipped to its corner radius, as are the AWS zone icons in tabs). AWS's icon guidelines ask that icons not be cropped;
